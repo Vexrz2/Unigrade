@@ -3,14 +3,14 @@ import { connectDB } from '@/lib/db';
 import { authMiddleware, unauthorizedResponse } from '@/lib/auth';
 import { updateCourse } from '@/lib/controllers/CourseController';
 
-export async function PATCH(request: NextRequest, { params }: { params: { courseId: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
         await connectDB();
         const auth = await authMiddleware(request);
         if (!auth) {
             return unauthorizedResponse();
         }
-        const { courseId } = params;
+        const { courseId } = await params;
         const data = await request.json();
         const result = await updateCourse(auth.userId, courseId, data);
         return NextResponse.json(result, { status: 201 });
