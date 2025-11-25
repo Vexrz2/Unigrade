@@ -22,8 +22,7 @@ export default function RegisterPage() {
     e.preventDefault();
     try {
       const res = await api.post('/users/register', formData);
-      if (typeof window !== 'undefined') localStorage.setItem('token', res.data.token);
-      setUser && setUser(formData as any);
+      setUser && setUser(res.data.user);
       router.push('/');
     } catch (err: any) {
       setErrorMessage(err?.response?.data?.message ?? String(err));

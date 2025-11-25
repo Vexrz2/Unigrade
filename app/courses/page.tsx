@@ -15,9 +15,8 @@ export default function CoursesPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchCourses = useCallback(async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     try {
-      const res = await api.get('/courses/courseList', { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+      const res = await api.get('/courses/course-list');
       setCourses(res.data);
     } catch (err) {
       console.error(err);
@@ -31,13 +30,8 @@ export default function CoursesPage() {
   }, [fetchCourses]);
 
   const addCourse = async (formData: Partial<Course>) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    if (!token) {
-      router.push('/login');
-      return;
-    }
     try {
-      await api.post('/courses/addCourse', formData, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post('/courses/add-course', formData);
       fetchCourses();
     } catch (err) {
       console.error(err);
@@ -45,9 +39,8 @@ export default function CoursesPage() {
   };
 
   const editCourse = async (courseId: string, formData: Partial<Course>) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     try {
-      await api.patch(`/courses/updateCourse/${courseId}`, formData, { headers: { Authorization: `Bearer ${token}` } });
+      await api.patch(`/courses/update-course/${courseId}`, formData);
       fetchCourses();
     } catch (err) {
       console.error(err);
@@ -55,9 +48,8 @@ export default function CoursesPage() {
   };
 
   const removeCourse = async (courseId: string) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     try {
-      await api.delete('/courses/removeCourse', { data: { courseId }, headers: { Authorization: `Bearer ${token}` } });
+      await api.delete('/courses/delete-course', { data: { courseId } });
       fetchCourses();
     } catch (err) {
       console.error(err);

@@ -9,11 +9,8 @@ export const useFetchCourses = () => {
 
   useEffect(() => {
     const fetchCourses = async () => {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       try {
-        const res = await api.get('/courses/courseList', {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
+        const res = await api.get('/courses/course-list');
         setCourses(res.data);
       } catch (err: any) {
         setError(err?.message ?? String(err));

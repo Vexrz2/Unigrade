@@ -34,9 +34,8 @@ export default function StudyPlanPage() {
   };
 
   const updateDegree = async (payload: any) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     try {
-      const res = await api.patch('/degree/updateDegree', payload, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+      const res = await api.patch('/degree/update-degree', payload);
       if (messageBox.current) messageBox.current.style.color = 'green';
       setMessage('Changes saved successfully!');
       setUser && setUser(res.data.updatedUser);

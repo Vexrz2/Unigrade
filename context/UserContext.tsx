@@ -20,20 +20,12 @@ export default function UserContextProvider({ children }: { children: React.Reac
 
   useEffect(() => {
     const fetchUser = async () => {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      if (!token) {
-        setLoading(false);
-        return;
-      }
       try {
-        const res = await api.get('/users/profile', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await api.get('/users/profile');
         setUser(res.data.user ?? null);
       } catch (err) {
         console.error(err);
         setUser(null);
-        if (typeof window !== 'undefined') localStorage.removeItem('token');
         router.push('/login');
       } finally {
         setLoading(false);

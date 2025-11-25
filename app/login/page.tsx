@@ -21,7 +21,6 @@ export default function LoginPage() {
     e.preventDefault();
     try {
       const res = await api.post('/users/login', formData);
-      if (typeof window !== 'undefined') localStorage.setItem('token', res.data.token);
       setUser && setUser(res.data.user);
       router.push('/dashboard');
     } catch (err: any) {

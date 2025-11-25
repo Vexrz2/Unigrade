@@ -25,7 +25,7 @@ export default function CareerPlanPage() {
     try {
       setIsLoading(true);
       const requestQuery = searchQuery + ' in ' + location;
-      const res = await api.post('/getJobListings', {
+      const res = await api.post('/jobs/get-job-listings', {
         queryParams: {
           query: requestQuery,
           date_posted: 'month',

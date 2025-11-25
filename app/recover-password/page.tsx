@@ -13,7 +13,7 @@ export default function RecoverPasswordPage() {
     e.preventDefault();
     try {
       setShowMessage(true);
-      await api.post('/users/recoverPassword', formData);
+      await api.post('/users/recover-password', formData);
     } catch (err) {
       console.error(err);
     }

@@ -35,8 +35,7 @@ export default function ProfilePage() {
 
   const updateUser = async (payload: any) => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const res = await api.patch('/users/update', payload, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+      const res = await api.patch('/users/update', payload);
       if (messageBox.current) messageBox.current.style.color = 'green';
       setMessage('Changes saved successfully!');
       setUser && setUser(res.data.updatedUser);
@@ -49,7 +48,7 @@ export default function ProfilePage() {
 
   const logoutUser = async () => {
     try {
-      if (typeof window !== 'undefined') localStorage.removeItem('token');
+      await api.post('/users/logout');
       setUser && setUser(null);
       router.push('/');
     } catch (err) {
@@ -59,9 +58,7 @@ export default function ProfilePage() {
 
   const deleteUser = async () => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      await api.delete('/users/delete', { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
-      if (typeof window !== 'undefined') localStorage.removeItem('token');
+      await api.delete('/users/delete');
       alert('Account deleted');
       deleteModal.closeModal();
       setUser && setUser(null);
@@ -76,8 +73,7 @@ export default function ProfilePage() {
     const form = e.target as HTMLFormElement;
     const formDataObj = new FormData(form);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      await api.post('/users/changePassword', formDataObj, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+      await api.post('/users/change-password', formDataObj);
       alert('Password changed successfully!');
       passwordModal.closeModal();
     } catch (error: any) {
