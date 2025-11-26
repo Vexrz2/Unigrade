@@ -20,7 +20,7 @@ export default function LoginPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await api.post('/users/login', formData);
+      const res = await api.post('/auth/login', formData);
       setUser && setUser(res.data.user);
       router.push('/dashboard');
     } catch (err: any) {

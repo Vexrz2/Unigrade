@@ -73,7 +73,7 @@ export default function ProfilePage() {
     const form = e.target as HTMLFormElement;
     const formDataObj = new FormData(form);
     try {
-      await api.post('/users/change-password', formDataObj);
+      await api.post('/auth/change-password', formDataObj);
       alert('Password changed successfully!');
       passwordModal.closeModal();
     } catch (error: any) {

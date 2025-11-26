@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { loginUser } from '@/lib/controllers/UserController';
+import { loginUser } from '@/lib/controllers/AuthController';
 import { setAuthCookie } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {

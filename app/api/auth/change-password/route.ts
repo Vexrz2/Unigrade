@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { authMiddleware, unauthorizedResponse } from '@/lib/auth';
-import { updateUserPassword } from '@/lib/controllers/UserController';
+import { updateUserPassword } from '@/lib/controllers/AuthController';
 
 export async function POST(request: NextRequest) {
     try {
