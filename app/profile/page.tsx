@@ -48,7 +48,7 @@ export default function ProfilePage() {
 
   const logoutUser = async () => {
     try {
-      await api.post('/users/logout');
+      await api.post('/auth/logout');
       setUser && setUser(null);
       router.push('/');
     } catch (err) {
