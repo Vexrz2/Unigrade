@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
         const data = await request.json();
         const result = await addCourse(auth.userId, data);
         return NextResponse.json(result, { status: 201 });
-    } catch (error) {
+    } catch (error: any) {
         return NextResponse.json({ message: error.message }, { status: 400 });
     }
 }

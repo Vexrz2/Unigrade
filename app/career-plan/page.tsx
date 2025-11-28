@@ -91,7 +91,10 @@ export default function CareerPlanPage() {
         <div className="jobs-container flex flex-wrap w-2/3 self-center overflow-y-scroll h-screen">
           {jobListings.map((jobListing: JobListing, idx: number) => (
             <div key={idx} className="m-2 py-2 px-4 flex flex-col bg-theme2 items-center rounded shadow-md h-64 w-64">
-              <h1 className="text-lg font-bold">{(jobListing.job_job_title ?? jobListing.job_title) ? ((jobListing.job_job_title ?? jobListing.job_title).length < 30 ? (jobListing.job_job_title ?? jobListing.job_title) : (jobListing.job_job_title ?? jobListing.job_title).slice(0, 30) + '...') : 'Job'}</h1>
+              <h1>{(() => {
+                const title = jobListing.job_job_title ?? jobListing.job_title ?? 'Job';
+                return title.length > 30 ? title.slice(0, 30) + '...' : title;
+              })()}</h1>
               <Image src={jobListing.employer_logo ?? '/favicon.png'} alt='Company logo' className="max-h-40 max-w-40 my-2" />
               <p>{jobListing.employer_name}</p>
               <p>{jobListing.job_city}, {jobListing.job_country}</p>
