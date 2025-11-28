@@ -4,52 +4,189 @@ import React, { useEffect, useState } from 'react';
 import { FiX } from 'react-icons/fi';
 import type { Course } from '../../types';
 
-export default function EditCourseModal({ isOpen, onClose, editCourse, currentCourse }: { isOpen: boolean; onClose: () => void; editCourse: (id: string, data: Partial<Course>) => void; currentCourse: Course | null }) {
+export default function EditCourseModal({ isOpen, onClose, editCourse, currentCourse }: { isOpen: boolean; onClose: () => void; editCourse: (id: string, data: Partial<Course>) => Promise<{ success: boolean; error?: string }>; currentCourse: Course | null }) {
   const [formData, setFormData] = useState({ courseName: '', courseGrade: 0, courseCredit: 0 });
+  const [errors, setErrors] = useState<{ courseName?: string; courseGrade?: string; courseCredit?: string; general?: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (currentCourse) {
-      setFormData({ courseName: currentCourse.courseName ?? '', courseGrade: currentCourse.courseGrade ?? 0, courseCredit: currentCourse.courseCredit ?? 0 });
+      setFormData({ 
+        courseName: currentCourse.courseName ?? '', 
+        courseGrade: currentCourse.courseGrade ?? 0, 
+        courseCredit: currentCourse.courseCredit ?? 0 
+      });
+      setErrors({});
     }
   }, [currentCourse]);
 
   if (!isOpen) return null;
 
-  const { courseName, courseGrade, courseCredit } = formData;
-
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, [e.target.name]: e.target.value } as any);
-
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (currentCourse && currentCourse._id) {
-      editCourse(currentCourse._id, formData);
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: name === 'courseName' ? value : Number(value) } as any);
+    // Clear error for this field when user starts typing
+    if (errors[name as keyof typeof errors]) {
+      setErrors({ ...errors, [name]: undefined });
     }
-    onClose();
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: typeof errors = {};
+
+    if (!formData.courseName.trim()) {
+      newErrors.courseName = 'Course name is required';
+    }
+
+    const grade = Number(formData.courseGrade);
+    if (isNaN(grade) || grade < 0 || grade > 100) {
+      newErrors.courseGrade = 'Grade must be between 0 and 100';
+    }
+
+    const credit = Number(formData.courseCredit);
+    if (isNaN(credit) || credit <= 0) {
+      newErrors.courseCredit = 'Course credit must be greater than 0';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
+
+    if (!validateForm()) {
+      return;
+    }
+
+    if (currentCourse && currentCourse._id) {
+      setIsSubmitting(true);
+      const result = await editCourse(currentCourse._id, formData);
+      setIsSubmitting(false);
+      
+      if (result.success) {
+        onClose();
+      } else {
+        setErrors({ general: result.error });
+      }
+    }
+  };
+
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
   };
 
   return (
-    <div tabIndex={-1} className="modal-overlay overflow-y-auto flex flex-col overflow-x-hidden fixed top-0 right-0 left-0 z-0 justify-center items-center w-full md:inset-0 max-h-full bg-opacity-20 bg-black">
-      <div className="w-1/4 modal-content relative bg-theme1 rounded-lg shadow p-4">
-        <div className="flex items-center justify-between p-2 border-b rounded-t">
-          <h3 className="text-xl  text-gray-900">Update course</h3>
-          <button type="button" onClick={onClose} className="end-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center">
-            <FiX />
-          </button>
+    <div 
+      tabIndex={-1} 
+      className="fixed inset-0 z-50 flex items-center justify-center w-full h-full bg-black/30"
+      style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+      onClick={handleOverlayClick}
+    >
+      <div className="relative w-full max-w-md mx-4 bg-white rounded-lg shadow-xl overflow-hidden">
+        {/* Header */}
+        <div className="bg-linear-to-r from-theme4 to-theme3 px-8 py-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-bold text-white">Edit Course</h3>
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="text-white hover:bg-gray-500/50 rounded-lg p-2 transition-colors"
+              aria-label="Close modal"
+            >
+              <FiX size={24} />
+            </button>
+          </div>
         </div>
-        <form onSubmit={onSubmit} className='flex flex-col items-center w-2/3 mx-auto mt-5'>
-          <div className="form-group mb-4 w-full">
-            <label className='block text-gray-700 text-sm font-bold mb-2'>Name</label>
-            <input type="text" name="courseName" value={courseName} onChange={onChange} required className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+
+        {/* Form */}
+        <form onSubmit={onSubmit} className='px-8 py-6'>
+          {errors.general && (
+            <div className='mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded'>
+              <p className='text-red-700 text-sm font-medium'>{errors.general}</p>
+            </div>
+          )}
+
+          <div className="form-group mb-6">
+            <label className='block text-gray-800 text-sm font-semibold mb-3'>Course Name</label>
+            <input 
+              type="text" 
+              name="courseName" 
+              value={formData.courseName} 
+              onChange={onChange} 
+              placeholder="e.g., Introduction to Computer Science"
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
+                errors.courseName 
+                  ? 'border-red-500 focus:border-red-500' 
+                  : 'border-gray-200 focus:border-theme3'
+              }`}
+            />
+            {errors.courseName && (
+              <p className='text-red-600 text-xs mt-1'>{errors.courseName}</p>
+            )}
           </div>
-          <div className="form-group mb-4 w-full">
-            <label className='block text-gray-700 text-sm font-bold mb-2'>Grade</label>
-            <input type="number" name="courseGrade" value={courseGrade as any} onChange={onChange} required min={0} max={100} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+
+          <div className="form-group mb-6">
+            <label className='block text-gray-800 text-sm font-semibold mb-3'>Grade</label>
+            <input 
+              type="number" 
+              name="courseGrade" 
+              value={formData.courseGrade || ''} 
+              onChange={onChange} 
+              min={0} 
+              max={100} 
+              placeholder="0-100"
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
+                errors.courseGrade 
+                  ? 'border-red-500 focus:border-red-500' 
+                  : 'border-gray-200 focus:border-theme3'
+              }`}
+            />
+            {errors.courseGrade && (
+              <p className='text-red-600 text-xs mt-1'>{errors.courseGrade}</p>
+            )}
           </div>
-          <div className="form-group mb-4 w-full">
-            <label className='block text-gray-700 text-sm font-bold mb-2'>Course credit</label>
-            <input type="number" name="courseCredit" value={courseCredit as any} onChange={onChange} required min={0} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+
+          <div className="form-group mb-6">
+            <label className='block text-gray-800 text-sm font-semibold mb-3'>Course Credit</label>
+            <input 
+              type="number" 
+              name="courseCredit" 
+              value={formData.courseCredit || ''} 
+              onChange={onChange} 
+              min={0} 
+              step="0.5"
+              placeholder="Credit hours"
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
+                errors.courseCredit 
+                  ? 'border-red-500 focus:border-red-500' 
+                  : 'border-gray-200 focus:border-theme3'
+              }`}
+            />
+            {errors.courseCredit && (
+              <p className='text-red-600 text-xs mt-1'>{errors.courseCredit}</p>
+            )}
           </div>
-          <button type="submit" className='w-2/3 text-xl bg-theme3 shadow-sm text-white py-1 px-2 rounded-full text-center'>Save changes</button>
+
+          <div className="flex gap-3">
+            <button 
+              type="button"
+              onClick={onClose}
+              className='flex-1 bg-gray-200 hover:bg-gray-100 hover:bg-opacity-30 text-gray-800 font-semibold py-3 px-4 rounded-lg transition-colors'
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              disabled={isSubmitting}
+              className='flex-1 bg-linear-to-r from-theme3 to-theme4 hover:shadow-lg text-white font-bold py-3 px-4 rounded-lg transition-shadow duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+            >
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
         </form>
       </div>
     </div>
