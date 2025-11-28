@@ -7,18 +7,20 @@ import { IoIosSearch } from 'react-icons/io';
 import { EmploymentTypes } from '../../components/misc/SelectOptions';
 import { TfiLocationPin } from 'react-icons/tfi';
 import { FaSuitcase } from 'react-icons/fa';
+import Image from 'next/image';
+import type { JobListing } from '@/types';
 
 export default function CareerPlanPage() {
   const ctx = useContext(UserContext);
   const user = ctx?.user ?? null;
   const [formData, setFormData] = useState({ employmentType: 'INTERN', location: '' });
   const [searchQuery, setSearchQuery] = useState('');
-  const [jobListings, setJobListings] = useState<any[]>([]);
+  const [jobListings, setJobListings] = useState<JobListing[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const { employmentType, location } = formData;
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFormData({ ...formData, [e.target.name]: e.target.value } as any);
+  const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFormData({ ...formData, [e.target.name]: e.target.value } as typeof formData);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,10 +89,10 @@ export default function CareerPlanPage() {
         <div className="p-8 text-center">Loading...</div>
       ) : (
         <div className="jobs-container flex flex-wrap w-2/3 self-center overflow-y-scroll h-screen">
-          {jobListings.map((jobListing: any, idx: number) => (
+          {jobListings.map((jobListing: JobListing, idx: number) => (
             <div key={idx} className="m-2 py-2 px-4 flex flex-col bg-theme2 items-center rounded shadow-md h-64 w-64">
               <h1 className="text-lg font-bold">{(jobListing.job_job_title ?? jobListing.job_title) ? ((jobListing.job_job_title ?? jobListing.job_title).length < 30 ? (jobListing.job_job_title ?? jobListing.job_title) : (jobListing.job_job_title ?? jobListing.job_title).slice(0, 30) + '...') : 'Job'}</h1>
-              <img src={jobListing.employer_logo} alt='Company logo' className="max-h-40 max-w-40 my-2" />
+              <Image src={jobListing.employer_logo ?? '/favicon.png'} alt='Company logo' className="max-h-40 max-w-40 my-2" />
               <p>{jobListing.employer_name}</p>
               <p>{jobListing.job_city}, {jobListing.job_country}</p>
               <p>Rating: {jobListing.job_apply_quality_score ? (jobListing.job_apply_quality_score * 5).toFixed(2) : 'N/A'}</p>

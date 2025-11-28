@@ -51,7 +51,7 @@ export default function Proxy(req: NextRequest) {
         }
     }
 
-    let response = NextResponse.next();
+    const response = NextResponse.next();
     return response;
 }
 

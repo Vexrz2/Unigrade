@@ -21,45 +21,90 @@ export default function LoginPage() {
     e.preventDefault();
     try {
       const res = await api.post('/auth/login', formData);
-      setUser && setUser(res.data.user);
+      if (setUser) setUser(res.data.user);
       router.push('/dashboard');
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorResponse = err as { response?: { data?: { message?: string } } };
       setFormData({ email: formData.email, password: '' });
-      setErrorMessage(err?.response?.data?.message ?? String(err));
-      console.error(err?.response?.data ?? err);
+      setErrorMessage(errorResponse?.response?.data?.message ?? String(err));
+      console.error(errorResponse?.response?.data ?? err);
     }
   };
 
   return (
-    <>
-      <div className="form-container bg-theme1 shadow-md rounded py-10 flex flex-col items-center w-2/3 mx-auto">
-        <h2 className='text-4xl pb-5 font-bold text-center'>Login</h2>
-        <form className='w-1/4 flex flex-col items-center mb-3' onSubmit={onSubmit}>
-          <div className="form-group mb-4">
-            <label className='block text-gray-700 text-sm font-bold mb-2'>Email</label>
-            <input className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="email" name="email" value={formData.email} onChange={onChange} required />
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-theme4 to-theme2 px-4 py-12">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+          {/* Header */}
+          <div className="bg-linear-to-r from-theme4 to-theme3 px-8 py-10">
+            <h1 className='text-4xl font-bold text-white text-center'>Welcome Back</h1>
+            <p className='text-theme2 text-center mt-2 text-sm'>Sign in to your Unigrade account</p>
           </div>
-          <div className="form-group mb-4 relative">
-            <label className='block text-gray-700 text-sm font-bold mb-2'>Password</label>
-            <input ref={passwordInputRef} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="password" name="password" value={formData.password} onChange={onChange} required />
-            <button type="button" onClick={toggleViewPassword} className="absolute inset-y-12 end-0 flex items-center px-3 cursor-pointer rounded-e-md focus:outline-none">
-              {isPasswordHidden ? <FiEye /> : <FiEyeOff />}
+
+          {/* Form */}
+          <form className='px-8 py-10' onSubmit={onSubmit}>
+            {errorMessage && (
+              <div className='mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded'>
+                <p className='text-red-700 text-sm font-medium'>{errorMessage}</p>
+              </div>
+            )}
+
+            <div className="form-group mb-6">
+              <label className='block text-gray-800 text-sm font-semibold mb-3'>Email Address</label>
+              <input 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors" 
+                type="email" 
+                name="email" 
+                value={formData.email} 
+                onChange={onChange} 
+                placeholder="you@example.com"
+                required 
+              />
+            </div>
+
+            <div className="form-group mb-8">
+              <label className='block text-gray-800 text-sm font-semibold mb-3'>Password</label>
+              <div className="relative">
+                <input 
+                  ref={passwordInputRef} 
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors pr-12" 
+                  type="password" 
+                  name="password" 
+                  value={formData.password} 
+                  onChange={onChange} 
+                  placeholder="••••••••"
+                  required 
+                />
+                <button 
+                  type="button" 
+                  onClick={toggleViewPassword} 
+                  className="absolute inset-y-0 right-4 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
+                >
+                  {isPasswordHidden ? <FiEye size={20} /> : <FiEyeOff size={20} />}
+                </button>
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              className='w-full bg-linear-to-r from-theme3 to-theme4 hover:shadow-lg text-white font-bold py-3 px-4 rounded-lg transition-shadow duration-200'
+            >
+              Sign In
             </button>
+          </form>
+
+          {/* Links */}
+          <div className='border-t border-gray-200 px-8 py-6'>
+            <div className='text-center mb-4'>
+              <a href='/recover-password' className='text-theme3 hover:text-theme4 font-semibold text-sm transition-colors'>Forgot your password?</a>
+            </div>
+            <div className='text-center'>
+              <span className='text-gray-600 text-sm'>Don&apos;t have an account? </span>
+              <a href='/register' className='text-theme3 hover:text-theme4 font-semibold text-sm transition-colors'>Sign up here</a>
+            </div>
           </div>
-          <div className='w-2/3 text-xl bg-theme3 shadow-sm text-white py-1 px-2 rounded-full text-center'>
-            <button className='w-full' type="submit">Log In</button>
-          </div>
-        </form>
-        <div className='mx-auto mb-4'>
-          <a href='/recover-password' className='hover:underline'><p>Forgot password?</p></a>
         </div>
-        <div className='mx-auto'>
-          <a href='/register' className='text-purple-400'>Create an account</a>
-        </div>
-      </div >
-      <div className='register-error-message p-4 text-red-600  text-center'>
-        {errorMessage}
       </div>
-    </>
+    </div>
   );
 }

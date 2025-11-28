@@ -8,6 +8,7 @@ import { MajorOptions } from '../../components/misc/SelectOptions';
 import ChangePasswordModal from '../../components/profile/ChangePasswordModal';
 import DeleteAccountModal from '../../components/profile/DeleteAccountModal';
 import { useModal } from '../../hooks/useModal';
+import { UserProfileData } from '@/types';
 
 export default function ProfilePage() {
   const ctx = useContext(UserContext);
@@ -20,36 +21,39 @@ export default function ProfilePage() {
   const deleteModal = useModal();
   const [changePasswordErrorMessage, setChangePasswordErrorMessage] = useState('');
   const messageBox = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
-    if (user?.degree) setFormData({ username: user.username ?? '', email: user.email ?? '', major: user.degree.major ?? '' });
-    else if (user?.username && user?.email) setFormData({ username: user.username, email: user.email, major: '' });
+    const setUserData = async () => {
+      if (user?.degree) await setFormData({ username: user.username ?? '', email: user.email ?? '', major: user.degree.major ?? '' });
+    else if (user?.username && user?.email) await setFormData({ username: user.username, email: user.email, major: '' });
+    };
+    setUserData();
   }, [user]);
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFormData({ ...formData, [e.target.name]: e.target.value } as any);
+  const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFormData({ ...formData, [e.target.name]: e.target.value } as UserProfileData);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateUser(formData);
   };
 
-  const updateUser = async (payload: any) => {
+  const updateUser = async (payload: { username: string; email: string; major: string }) => {
     try {
       const res = await api.patch('/users/update', payload);
       if (messageBox.current) messageBox.current.style.color = 'green';
       setMessage('Changes saved successfully!');
-      setUser && setUser(res.data.updatedUser);
-    } catch (err: any) {
+      if (setUser) setUser(res.data.updatedUser);
+    } catch (err: unknown) {
+      const errorResponse = err as { response?: { data?: { message?: string } } };
       if (messageBox.current) messageBox.current.style.color = 'red';
-      setMessage(err?.response?.data?.message ?? String(err));
-      console.error(err?.response ?? err);
+      setMessage(errorResponse?.response?.data?.message ?? String(err));
+      console.error(errorResponse?.response ?? err);
     }
   };
 
   const logoutUser = async () => {
     try {
       await api.post('/auth/logout');
-      setUser && setUser(null);
+      if (setUser) setUser(null);
       router.push('/');
     } catch (err) {
       console.error(err);
@@ -61,7 +65,7 @@ export default function ProfilePage() {
       await api.delete('/users/delete');
       alert('Account deleted');
       deleteModal.closeModal();
-      setUser && setUser(null);
+      if (setUser) setUser(null);
       router.push('/');
     } catch (err) {
       console.error(err);
@@ -76,40 +80,121 @@ export default function ProfilePage() {
       await api.post('/auth/change-password', formDataObj);
       alert('Password changed successfully!');
       passwordModal.closeModal();
-    } catch (error: any) {
-      setChangePasswordErrorMessage(error?.response?.data?.message ?? String(error));
-      console.error(error?.response ?? error);
+    } catch (error: unknown) {
+      const errorResponse = error as { response?: { data?: { message?: string } } };
+      setChangePasswordErrorMessage(errorResponse?.response?.data?.message ?? String(error));
+      console.error(errorResponse?.response ?? error);
     }
   };
 
   return (
-    <div className="profile-container bg-theme1 shadow-md rounded py-8 flex flex-col w-2/3 mx-auto items-center">
-      <h2 className='text-3xl font-bold p-5 text-center'>Profile</h2>
-      <form onSubmit={onSubmit} className='mt-10 flex flex-col items-center'>
-        <div className="form-group mb-4">
-          <label className='block text-gray-700 text-sm font-bold mb-2'>Username</label>
-          <input type="text" name="username" value={formData.username} onChange={onChange} required className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline w-full" />
+    <div className="min-h-screen bg-linear-to-br from-theme2 to-theme1 px-4 py-12">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className='text-4xl font-bold text-gray-800 mb-2'>Profile Settings</h1>
+          <p className='text-gray-600'>Manage your account information</p>
         </div>
-        <div className="form-group mb-4">
-          <label className='block text-gray-700 text-sm font-bold mb-2'>Email</label>
-          <input type="email" name="email" value={formData.email} onChange={onChange} required className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline w-full" />
+
+        {/* Message Box */}
+        {message && (
+          <div 
+            ref={messageBox}
+            className='mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded'
+          >
+            <p className='text-green-700 font-medium'>{message}</p>
+          </div>
+        )}
+
+        {/* Profile Form */}
+        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+          <h2 className='text-2xl font-bold text-gray-800 mb-6'>Account Information</h2>
+          <form onSubmit={onSubmit} className='space-y-6'>
+            <div className="form-group">
+              <label className='block text-gray-700 text-sm font-semibold mb-2'>Username</label>
+              <input 
+                type="text" 
+                name="username" 
+                value={formData.username} 
+                onChange={onChange} 
+                required 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className='block text-gray-700 text-sm font-semibold mb-2'>Email Address</label>
+              <input 
+                type="email" 
+                name="email" 
+                value={formData.email} 
+                onChange={onChange} 
+                required 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className='block text-gray-700 text-sm font-semibold mb-2'>Major</label>
+              <select 
+                value={formData.major} 
+                name='major' 
+                onChange={onChange} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors"
+              >
+                <MajorOptions />
+              </select>
+            </div>
+
+            <button 
+              type="submit" 
+              className='w-full bg-theme3 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors'
+            >
+              Save Changes
+            </button>
+          </form>
         </div>
-        <div className="form-group mb-4 w-full">
-          <label className='block text-gray-700 text-sm font-bold mb-2'>Major</label>
-          <select value={formData.major} name='major' onChange={onChange} className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline w-full">
-            <MajorOptions />
-          </select>
+
+        {/* Security Section */}
+        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+          <h2 className='text-2xl font-bold text-gray-800 mb-6'>Security</h2>
+          <div className="space-y-4">
+            <button 
+              onClick={passwordModal.openModal} 
+              className='w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors'
+            >
+              <div className='font-semibold text-gray-800'>Change Password</div>
+              <div className='text-sm text-gray-600'>Update your password regularly for security</div>
+            </button>
+          </div>
         </div>
-        <button type="submit" className='text-lg bg-theme3 shadow-sm text-white py-2 px-4 rounded-full text-center'>Save changes</button>
-      </form>
-      <div className='message-box p-4  text-center mb-10' ref={messageBox}>{message}</div>
-      <div className='flex mb-8 space-x-4'>
-        <button onClick={passwordModal.openModal} className='change-password text-lg bg-theme3 shadow-sm text-white py-2 px-4 rounded-full text-center'>Change password</button>
-        <button onClick={logoutUser} className='logout text-lg bg-gray-500 shadow-sm text-white py-2 px-4 rounded-full text-center'>Logout</button>
+
+        {/* Danger Zone */}
+        <div className="bg-white rounded-lg shadow-md p-8 border-l-4 border-red-500">
+          <h2 className='text-2xl font-bold text-gray-800 mb-6'>Danger Zone</h2>
+          <div className="space-y-4">
+            <button 
+              onClick={logoutUser}
+              className='w-full text-left px-4 py-3 bg-orange-50 hover:bg-orange-100 rounded-lg border border-orange-200 transition-colors'
+            >
+              <div className='font-semibold text-gray-800'>Logout</div>
+              <div className='text-sm text-gray-600'>Sign out of your account</div>
+            </button>
+
+            <button 
+              onClick={deleteModal.openModal}
+              className='w-full text-left px-4 py-3 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors'
+            >
+              <div className='font-semibold text-red-700'>Delete Account</div>
+              <div className='text-sm text-red-600'>Permanently delete your account and all data</div>
+            </button>
+          </div>
+        </div>
+
+        {/* Modals */}
+        <ChangePasswordModal isOpen={passwordModal.isOpen} onClose={passwordModal.closeModal} onSubmit={changeUserPassword} errorMessage={changePasswordErrorMessage} />
+        <DeleteAccountModal isOpen={deleteModal.isOpen} onClose={deleteModal.closeModal} deleteUser={deleteUser} />
       </div>
-      <button onClick={deleteModal.openModal} className='text-sm bg-red-500 hover:bg-red-400 text-white font-bold py-2 px-4 border-b-4 border-red-700 hover:border-red-500 rounded'>Delete account</button>
-      <ChangePasswordModal isOpen={passwordModal.isOpen} onClose={passwordModal.closeModal} onSubmit={changeUserPassword} errorMessage={changePasswordErrorMessage} />
-      <DeleteAccountModal isOpen={deleteModal.isOpen} onClose={deleteModal.closeModal} deleteUser={deleteUser} />
     </div>
   );
 }

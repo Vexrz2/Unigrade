@@ -2,7 +2,6 @@
 
 import React, { createContext, useEffect, useState } from 'react';
 import api from '../lib/api';
-import { useRouter } from 'next/navigation';
 import type { User } from '../types';
 
 type UserContextType = {
@@ -16,7 +15,6 @@ export const UserContext = createContext<UserContextType | undefined>(undefined)
 export default function UserContextProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -24,15 +22,13 @@ export default function UserContextProvider({ children }: { children: React.Reac
         const res = await api.get('/users/profile');
         setUser(res.data.user ?? null);
       } catch (err) {
-        console.error(err);
         setUser(null);
-        router.push('/login');
       } finally {
         setLoading(false);
       }
     };
     fetchUser();
-  }, [router]);
+  }, []);
 
   return (
     <UserContext.Provider value={{ user, setUser, loading }}>
