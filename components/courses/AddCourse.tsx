@@ -57,7 +57,11 @@ export default function AddCourse({ addCourse }: { addCourse: (data: Partial<Cou
     }
 
     setIsSubmitting(true);
-    const result = await addCourse(formData);
+    const result = await addCourse({
+      courseName: formData.courseName,
+      courseGrade: formData.courseGrade as number,
+      courseCredit: formData.courseCredit as number
+    });
     setIsSubmitting(false);
 
     if (result.success) {

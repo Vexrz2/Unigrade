@@ -11,7 +11,7 @@ import EditCourseModal from './EditCourseModal';
 import { useModal } from '../../hooks/useModal';
 import type { Course } from '../../types';
 
-export default function CourseList({ courses, removeCourse, isLoading, editCourse }: { courses: Course[]; removeCourse: (id: string) => void; isLoading: boolean; editCourse: (id: string, data: Partial<Course>) => void }) {
+export default function CourseList({ courses, removeCourse, isLoading, editCourse }: { courses: Course[]; removeCourse: (id: string) => void; isLoading: boolean; editCourse: (id: string, data: Partial<Course>) => Promise<{ success: boolean; error?: string }> }) {
   const [courseList, setCourseList] = useState<Course[]>([]);
   const [selectValue, setSelectValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
