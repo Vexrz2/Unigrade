@@ -4,11 +4,11 @@ import { useContext, useMemo } from 'react';
 import Link from 'next/link';
 import { UserContext } from '../../context/UserContext';
 import { getDegreeProgress, getWeightedAverage } from '../../lib/CoursesUtil';
-import { useFetchCourses } from '../../hooks/useFetchCourses';
+import { useCourses } from '@/hooks/useCourses';
 import { User } from '@/types';
 
 export default function DashboardPage() {
-    const { courses, isLoading } = useFetchCourses();
+    const { data: courses = [], isLoading } = useCourses();
     const ctx = useContext(UserContext);
     const user = ctx?.user ?? null;
     const weightedAverage = useMemo(() => getWeightedAverage(courses), [courses]);

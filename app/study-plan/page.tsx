@@ -3,12 +3,12 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { getDegreeProgress, getFinalAverageRange, getTotalCredit, getWeightedAverage } from '../../lib/CoursesUtil';
 import { UserContext } from '../../context/UserContext';
-import { useFetchCourses } from '../../hooks/useFetchCourses';
 import api from '../../lib/api';
 import { MajorOptions, DegreeTypes } from '../../components/misc/SelectOptions';
+import { useCourses } from '@/hooks/useCourses';
 
 export default function StudyPlanPage() {
-  const { courses } = useFetchCourses();
+  const { data: courses = [], isLoading } = useCourses();
   const ctx = useContext(UserContext);
   const user = ctx?.user ?? null;
   const setUser = ctx?.setUser;

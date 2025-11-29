@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import UserContextProvider from "@/context/UserContext";
+import QueryProvider from "@/lib/QueryProvider";
 import { Inter } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -20,13 +21,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className + " bg-theme2"}>
-        <UserContextProvider>
-          <main className="min-h-screen">
-            <Navbar />
-            {children}
-          </main>
-          <Footer />
-        </UserContextProvider>
+        <QueryProvider>
+          <UserContextProvider>
+            <main className="min-h-screen">
+              <Navbar />
+              {children}
+            </main>
+            <Footer />
+          </UserContextProvider>
+        </QueryProvider>
       </body>
     </html>
   );

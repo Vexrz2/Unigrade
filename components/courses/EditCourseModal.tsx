@@ -1,30 +1,28 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { FiX } from 'react-icons/fi';
-import type { Course } from '../../types';
+import type { Course, CourseFormData } from '@/types';
+import { useEditCourse } from '@/hooks/useCourses';
 
-export default function EditCourseModal({ isOpen, onClose, editCourse, currentCourse }: { isOpen: boolean; onClose: () => void; editCourse: (id: string, data: Partial<Course>) => Promise<{ success: boolean; error?: string }>; currentCourse: Course | null }) {
-  const [formData, setFormData] = useState({ courseName: '', courseGrade: 0, courseCredit: 0 });
+export default function EditCourseModal({ isOpen, onClose, currentCourse }: { isOpen: boolean; onClose: () => void; currentCourse: Course | null }) {
+  const [formData, setFormData] = useState<CourseFormData>(() => ({
+    courseName: currentCourse?.courseName || '',
+    courseGrade: currentCourse?.courseGrade ?? '',
+    courseCredit: currentCourse?.courseCredit ?? ''
+  }));
   const [errors, setErrors] = useState<{ courseName?: string; courseGrade?: string; courseCredit?: string; general?: string }>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (currentCourse) {
-      setFormData({ 
-        courseName: currentCourse.courseName ?? '', 
-        courseGrade: currentCourse.courseGrade ?? 0, 
-        courseCredit: currentCourse.courseCredit ?? 0 
-      });
-      setErrors({});
-    }
-  }, [currentCourse]);
+  const editCourseMutation = useEditCourse();
 
   if (!isOpen) return null;
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: name === 'courseName' ? value : Number(value) } as any);
+    // For number fields, preserve empty string, otherwise convert to number
+    const processedValue = name === 'courseName' 
+      ? value 
+      : (value === '' ? '' : Number(value));
+    setFormData({ ...formData, [name]: processedValue });
     // Clear error for this field when user starts typing
     if (errors[name as keyof typeof errors]) {
       setErrors({ ...errors, [name]: undefined });
@@ -38,14 +36,26 @@ export default function EditCourseModal({ isOpen, onClose, editCourse, currentCo
       newErrors.courseName = 'Course name is required';
     }
 
-    const grade = Number(formData.courseGrade);
-    if (isNaN(grade) || grade < 0 || grade > 100) {
-      newErrors.courseGrade = 'Grade must be between 0 and 100';
+    // Check if grade is provided
+    const gradeValue = formData.courseGrade;
+    if (gradeValue === null || gradeValue === undefined || gradeValue === '') {
+      newErrors.courseGrade = 'Grade is required';
+    } else {
+      const grade = Number(gradeValue);
+      if (isNaN(grade) || grade < 0 || grade > 100) {
+        newErrors.courseGrade = 'Grade must be between 0 and 100';
+      }
     }
 
-    const credit = Number(formData.courseCredit);
-    if (isNaN(credit) || credit <= 0) {
-      newErrors.courseCredit = 'Course credit must be greater than 0';
+    // Check if credit is provided
+    const creditValue = formData.courseCredit;
+    if (creditValue === null || creditValue === undefined || creditValue === '') {
+      newErrors.courseCredit = 'Course credit is required';
+    } else {
+      const credit = Number(creditValue);
+      if (isNaN(credit) || credit <= 0) {
+        newErrors.courseCredit = 'Course credit must be greater than 0';
+      }
     }
 
     setErrors(newErrors);
@@ -61,15 +71,26 @@ export default function EditCourseModal({ isOpen, onClose, editCourse, currentCo
     }
 
     if (currentCourse && currentCourse._id) {
-      setIsSubmitting(true);
-      const result = await editCourse(currentCourse._id, formData);
-      setIsSubmitting(false);
-      
-      if (result.success) {
-        onClose();
-      } else {
-        setErrors({ general: result.error });
-      }
+      editCourseMutation.mutate(
+        {
+          courseId: currentCourse._id,
+          formData: {
+            courseName: formData.courseName,
+            courseGrade: formData.courseGrade as number,
+            courseCredit: formData.courseCredit as number
+          }
+        },
+        {
+          onSuccess: () => {
+            onClose();
+          },
+          onError: (err: unknown) => {
+            const errorResponse = err as { response?: { data?: { message?: string } } };
+            const errorMessage = errorResponse?.response?.data?.message ?? 'Failed to update course. Please try again.';
+            setErrors({ general: errorMessage });
+          }
+        }
+      );
     }
   };
 
@@ -134,7 +155,7 @@ export default function EditCourseModal({ isOpen, onClose, editCourse, currentCo
             <input 
               type="number" 
               name="courseGrade" 
-              value={formData.courseGrade || ''} 
+              value={formData.courseGrade === '' ? '' : (formData.courseGrade ?? '')} 
               onChange={onChange} 
               min={0} 
               max={100} 
@@ -155,7 +176,7 @@ export default function EditCourseModal({ isOpen, onClose, editCourse, currentCo
             <input 
               type="number" 
               name="courseCredit" 
-              value={formData.courseCredit || ''} 
+              value={formData.courseCredit === '' ? '' : (formData.courseCredit ?? '')} 
               onChange={onChange} 
               min={0} 
               step="0.5"
@@ -181,10 +202,10 @@ export default function EditCourseModal({ isOpen, onClose, editCourse, currentCo
             </button>
             <button 
               type="submit" 
-              disabled={isSubmitting}
+              disabled={editCourseMutation.isPending}
               className='flex-1 bg-linear-to-r from-theme3 to-theme4 hover:shadow-lg text-white font-bold py-3 px-4 rounded-lg transition-shadow duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
             >
-              {isSubmitting ? 'Saving...' : 'Save Changes'}
+              {editCourseMutation.isPending ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>

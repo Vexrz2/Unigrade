@@ -27,6 +27,12 @@ export type UserProfileData = {
   major: string;
 };
 
+export type CourseFormData = {
+  courseName: string;
+  courseGrade: number | string;
+  courseCredit: number | string;
+};
+
 export type JobListing = {
   job_title?: string;
   job_job_title?: string;

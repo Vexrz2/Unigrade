@@ -1,18 +1,19 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { getMaxImprovement, getWorstCourse } from '../../lib/CoursesUtil';
-import _ from 'lodash';
 import { PiSortAscendingThin } from 'react-icons/pi';
 import { IoIosSearch } from 'react-icons/io';
 import { TiDelete } from 'react-icons/ti';
 import { BiEdit } from 'react-icons/bi';
 import EditCourseModal from './EditCourseModal';
 import { useModal } from '../../hooks/useModal';
+import { useCourses, useDeleteCourse } from '../../hooks/useCourses';
 import type { Course } from '../../types';
 
-export default function CourseList({ courses, removeCourse, isLoading, editCourse }: { courses: Course[]; removeCourse: (id: string) => void; isLoading: boolean; editCourse: (id: string, data: Partial<Course>) => Promise<{ success: boolean; error?: string }> }) {
-  const [courseList, setCourseList] = useState<Course[]>([]);
+export default function CourseList({ isLoading }: { isLoading: boolean }) {
+  const { data: courses = [] } = useCourses();
+  const deleteCourseMutation = useDeleteCourse();
   const [selectValue, setSelectValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -20,38 +21,40 @@ export default function CourseList({ courses, removeCourse, isLoading, editCours
   const worstCourse = useMemo(() => getWorstCourse(courses), [courses]);
   const maxImprovement = useMemo(() => getMaxImprovement(courses), [courses]);
 
-  useEffect(() => {
-    setCourseList(courses ?? []);
-  }, [courses]);
+  // Derive filtered and sorted course list from courses prop, searchQuery, and selectValue
+  const courseList = useMemo<Course[]>(() => {
+    let filtered: Course[] = (courses ?? []).filter(course => course._id);
+    
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter((course) => 
+        course.courseName && course.courseName.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    // Apply sort
+    switch (selectValue) {
+      case "gradeDesc":
+        return [...filtered].sort((a, b) => (b.courseGrade ?? 0) - (a.courseGrade ?? 0));
+      case "gradeAsc":
+        return [...filtered].sort((a, b) => (a.courseGrade ?? 0) - (b.courseGrade ?? 0));
+      case "creditDesc":
+        return [...filtered].sort((a, b) => (b.courseCredit ?? 0) - (a.courseCredit ?? 0));
+      case "creditAsc":
+        return [...filtered].sort((a, b) => (a.courseCredit ?? 0) - (b.courseCredit ?? 0));
+      case "alphabetical":
+        return [...filtered].sort((a, b) => (a.courseName ?? '').localeCompare(b.courseName ?? ''));
+      default:
+        return filtered;
+    }
+  }, [courses, searchQuery, selectValue]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    setCourseList(_.filter(courses, (course) => _.includes(course.courseName, query)));
+    setSearchQuery(e.target.value);
   };
 
   const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const sortMethod = e.target.value;
-    setSelectValue(sortMethod);
-    switch (sortMethod) {
-      case "gradeDesc":
-        setCourseList(_.sortBy(courses, ['courseGrade']).reverse());
-        break;
-      case "gradeAsc":
-        setCourseList(_.sortBy(courses, ['courseGrade']));
-        break;
-      case "creditDesc":
-        setCourseList(_.sortBy(courses, ['courseCredit']).reverse());
-        break;
-      case "creditAsc":
-        setCourseList(_.sortBy(courses, ['courseCredit']));
-        break;
-      case "alphabetical":
-        setCourseList(_.sortBy(courses, ['courseName']));
-        break;
-      default:
-        setCourseList(courses);
-    }
+    setSelectValue(e.target.value);
   };
 
   const handleEdit = (course: Course) => {
@@ -124,9 +127,10 @@ export default function CourseList({ courses, removeCourse, isLoading, editCours
                   <BiEdit size={20} />
                 </button>
                 <button 
-                  onClick={() => removeCourse(course._id as string)} 
+                  onClick={() => course._id && deleteCourseMutation.mutate(course._id)} 
                   className='p-2 text-red-600 hover:bg-red-100 text-center rounded-lg transition-colors'
                   title="Delete course"
+                  disabled={deleteCourseMutation.isPending}
                 >
                   <TiDelete size={20} />
                 </button>
@@ -139,7 +143,7 @@ export default function CourseList({ courses, removeCourse, isLoading, editCours
           )}
         </div>
       )}
-      {selectedCourse ? <EditCourseModal isOpen={editCourseModal.isOpen} onClose={editCourseModal.closeModal} editCourse={editCourse} currentCourse={selectedCourse} /> : null}
+      {selectedCourse ? <EditCourseModal key={selectedCourse._id} isOpen={editCourseModal.isOpen} onClose={editCourseModal.closeModal} currentCourse={selectedCourse} /> : null}
     </div>
   );
 }

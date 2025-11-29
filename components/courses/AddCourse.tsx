@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState } from 'react';
-import type { Course } from '../../types';
+import type { CourseFormData } from '@/types';
+import { useAddCourse } from '@/hooks/useCourses';
 
-export default function AddCourse({ addCourse }: { addCourse: (data: Partial<Course>) => Promise<{ success: boolean; error?: string }> }) {
-  const [formData, setFormData] = useState<{ courseName: string; courseGrade: number | string; courseCredit: number | string }>({ courseName: '', courseGrade: '', courseCredit: '' });
+export default function AddCourse() {
+  const [formData, setFormData] = useState<CourseFormData>({ courseName: '', courseGrade: '', courseCredit: '' });
   const [errors, setErrors] = useState<{ courseName?: string; courseGrade?: string; courseCredit?: string; general?: string }>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const addCourseMutation = useAddCourse();
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -14,7 +15,7 @@ export default function AddCourse({ addCourse }: { addCourse: (data: Partial<Cou
     const processedValue = name === 'courseName' 
       ? value 
       : (value === '' ? '' : Number(value));
-    setFormData({ ...formData, [name]: processedValue } as any);
+    setFormData({ ...formData, [name]: processedValue });
     // Clear error for this field when user starts typing
     if (errors[name as keyof typeof errors]) {
       setErrors({ ...errors, [name]: undefined });
@@ -56,20 +57,24 @@ export default function AddCourse({ addCourse }: { addCourse: (data: Partial<Cou
       return;
     }
 
-    setIsSubmitting(true);
-    const result = await addCourse({
-      courseName: formData.courseName,
-      courseGrade: formData.courseGrade as number,
-      courseCredit: formData.courseCredit as number
-    });
-    setIsSubmitting(false);
-
-    if (result.success) {
-      setFormData({ courseName: '', courseGrade: '' as any, courseCredit: '' as any });
-      setErrors({});
-    } else {
-      setErrors({ general: result.error });
-    }
+    addCourseMutation.mutate(
+      {
+        courseName: formData.courseName,
+        courseGrade: formData.courseGrade as number,
+        courseCredit: formData.courseCredit as number
+      },
+      {
+        onSuccess: () => {
+          setFormData({ courseName: '', courseGrade: '', courseCredit: '' });
+          setErrors({});
+        },
+        onError: (err: unknown) => {
+          const errorResponse = err as { response?: { data?: { message?: string } } };
+          const errorMessage = errorResponse?.response?.data?.message ?? 'Failed to add course. Please try again.';
+          setErrors({ general: errorMessage });
+        }
+      }
+    );
   };
 
   return (
@@ -145,10 +150,10 @@ export default function AddCourse({ addCourse }: { addCourse: (data: Partial<Cou
 
         <button 
           type="submit" 
-          disabled={isSubmitting}
+          disabled={addCourseMutation.isPending}
           className='w-full bg-linear-to-r from-theme3 to-theme4 hover:shadow-lg text-white font-bold py-3 px-4 rounded-lg transition-shadow duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
         >
-          {isSubmitting ? 'Adding...' : 'Add Course'}
+          {addCourseMutation.isPending ? 'Adding...' : 'Add Course'}
         </button>
       </form>
     </div>
