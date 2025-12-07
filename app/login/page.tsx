@@ -6,6 +6,7 @@ import api from '../../lib/api';
 import { UserContext } from '../../context/UserContext';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { useViewPasswordToggle } from '../../hooks/useViewPasswordToggle';
+import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -13,7 +14,7 @@ export default function LoginPage() {
   const router = useRouter();
   const ctx = useContext(UserContext);
   const setUser = ctx?.setUser;
-  const { isPasswordHidden, passwordInputRef, toggleViewPassword } = useViewPasswordToggle();
+  const { isPasswordHidden, inputType, toggleViewPassword } = useViewPasswordToggle();
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -22,10 +23,12 @@ export default function LoginPage() {
     try {
       const res = await api.post('/auth/login', formData);
       if (setUser) setUser(res.data.user);
+      toast('Welcome back!');
       router.push('/dashboard');
     } catch (err: unknown) {
       const errorResponse = err as { response?: { data?: { message?: string } } };
       setFormData({ email: formData.email, password: '' });
+      toast.error(errorResponse?.response?.data?.message ?? 'Login failed');
       setErrorMessage(errorResponse?.response?.data?.message ?? String(err));
       console.error(errorResponse?.response?.data ?? err);
     }
@@ -66,9 +69,8 @@ export default function LoginPage() {
               <label className='block text-gray-800 text-sm font-semibold mb-3'>Password</label>
               <div className="relative">
                 <input 
-                  ref={passwordInputRef} 
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors pr-12" 
-                  type="password" 
+                  type={inputType} 
                   name="password" 
                   value={formData.password} 
                   onChange={onChange} 

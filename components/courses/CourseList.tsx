@@ -10,6 +10,8 @@ import EditCourseModal from './EditCourseModal';
 import { useModal } from '../../hooks/useModal';
 import { useCourses, useDeleteCourse } from '../../hooks/useCourses';
 import type { Course } from '../../types';
+import toast from 'react-hot-toast';
+import { CourseListSkeleton } from '../Skeleton';
 
 export default function CourseList({ isLoading }: { isLoading: boolean }) {
   const { data: courses = [] } = useCourses();
@@ -63,7 +65,7 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
   };
 
   return (
-    <div className='bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow'>
+    <div className='bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border border-transparent'>
       <div className='mb-6'>
         <div className='flex flex-col sm:flex-row justify-between items-center gap-4 mb-4'>
           <div className="relative w-full sm:w-2/3">
@@ -99,11 +101,11 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
         </div>
       </div>
       {isLoading ? (
-        <div className="p-12 text-center text-gray-600">Loading courses...</div>
+        <CourseListSkeleton count={5} />
       ) : (
         <div className='flex flex-col overflow-y-auto border-2 border-gray-100 rounded-lg h-[700px] p-2'>
           {courseList.length > 0 ? courseList.filter(course => course._id).map(course => (
-            <div key={course._id} id={course._id} className='bg-gray-50 hover:bg-gray-100 m-2 border border-gray-200 rounded-lg shadow-sm p-4 flex items-center justify-between transition-colors'>
+            <div key={course._id} id={course._id} className='bg-gray-50 hover:bg-gray-100:bg-gray-700 m-2 border border-gray-200 rounded-lg shadow-sm p-4 flex items-center justify-between transition-colors'>
               <div className='course-details flex flex-col flex-1'>
                 <h3 className='font-bold text-xl text-gray-800 mb-2'>{course.courseName}</h3>
                 <div className='flex flex-wrap gap-4 text-gray-600'>
@@ -127,8 +129,15 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
                   <BiEdit size={20} />
                 </button>
                 <button 
-                  onClick={() => course._id && deleteCourseMutation.mutate(course._id)} 
-                  className='p-2 text-red-600 hover:bg-red-100 text-center rounded-lg transition-colors'
+                  onClick={() => {
+                    if (course._id) {
+                      deleteCourseMutation.mutate(course._id, {
+                        onSuccess: () => toast.success('Course deleted'),
+                        onError: () => toast.error('Failed to delete course'),
+                      });
+                    }
+                  }} 
+                  className='p-2 text-red-600 hover:bg-red-100:bg-red-900/30 text-center rounded-lg transition-colors'
                   title="Delete course"
                   disabled={deleteCourseMutation.isPending}
                 >

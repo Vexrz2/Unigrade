@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { CourseFormData } from '@/types';
 import { useAddCourse } from '@/hooks/useCourses';
+import toast from 'react-hot-toast';
 
 export default function AddCourse() {
   const [formData, setFormData] = useState<CourseFormData>({ courseName: '', courseGrade: '', courseCredit: '' });
@@ -67,18 +68,20 @@ export default function AddCourse() {
         onSuccess: () => {
           setFormData({ courseName: '', courseGrade: '', courseCredit: '' });
           setErrors({});
+          toast.success('Course added successfully!');
         },
         onError: (err: unknown) => {
           const errorResponse = err as { response?: { data?: { message?: string } } };
           const errorMessage = errorResponse?.response?.data?.message ?? 'Failed to add course. Please try again.';
           setErrors({ general: errorMessage });
+          toast.error(errorMessage);
         }
       }
     );
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow">
+    <div className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border border-transparent">
       <h2 className='text-2xl font-bold text-gray-800 mb-6 text-center'>Add Course</h2>
       <form onSubmit={onSubmit} className='flex flex-col'>
         {errors.general && (

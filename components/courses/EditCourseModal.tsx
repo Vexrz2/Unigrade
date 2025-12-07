@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { FiX } from 'react-icons/fi';
 import type { Course, CourseFormData } from '@/types';
 import { useEditCourse } from '@/hooks/useCourses';
+import toast from 'react-hot-toast';
 
 export default function EditCourseModal({ isOpen, onClose, currentCourse }: { isOpen: boolean; onClose: () => void; currentCourse: Course | null }) {
   const [formData, setFormData] = useState<CourseFormData>(() => ({
@@ -82,12 +83,14 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
         },
         {
           onSuccess: () => {
+            toast.success('Course updated successfully!');
             onClose();
           },
           onError: (err: unknown) => {
             const errorResponse = err as { response?: { data?: { message?: string } } };
             const errorMessage = errorResponse?.response?.data?.message ?? 'Failed to update course. Please try again.';
             setErrors({ general: errorMessage });
+            toast.error(errorMessage);
           }
         }
       );

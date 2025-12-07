@@ -30,7 +30,7 @@ export default function CoursesPage() {
             <AddCourse />
             
             {/* Average Card */}
-            <div className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow">
+            <div className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border border-transparent">
               <div className="flex items-center justify-between mb-4">
                 <h3 className='text-gray-700 font-semibold'>Weighted Average</h3>
               </div>

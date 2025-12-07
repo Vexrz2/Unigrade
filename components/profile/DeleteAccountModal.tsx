@@ -10,7 +10,7 @@ export default function DeleteAccountModal({ isOpen, onClose, deleteUser }: { is
     <div tabIndex={-1} onClick={onClose} className="modal-overlay overflow-y-auto flex flex-col overflow-x-hidden fixed top-0 right-0 left-0 z-0 justify-center items-center w-full md:inset-0 max-h-full bg-opacity-60 bg-black">
       <div className="relative p-4 w-full max-w-md max-h-full">
         <div className="modal-content relative bg-theme1 rounded-lg shadow p-4">
-          <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+          <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t">
             <h3 className="text-xl  text-gray-900">Account deletion</h3>
             <button type="button" onClick={onClose} className="end-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center">
               <FiX />

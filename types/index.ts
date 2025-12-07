@@ -4,21 +4,21 @@ export type Course = {
   courseCode?: string;
   courseCredit: number;
   courseGrade: number;
-  [key: string]: any;
 };
 
 export type Degree = {
+  type: string;
+  major: string;
   creditRequirement: number;
-  [key: string]: any;
 };
 
 export type User = {
+  username: string;
   _id?: string;
   name?: string;
   email?: string;
   courses: Course[];
-  degree: Degree;
-  [key: string]: any;
+  degree?: Degree;
 };
 
 export type UserProfileData = {
@@ -34,14 +34,18 @@ export type CourseFormData = {
 };
 
 export type JobListing = {
+  job_id?: string;
   job_title?: string;
   job_job_title?: string;
+  job_description?: string;
   employer_name?: string;
   employer_logo: string;
   job_city?: string;
   job_country?: string;
   job_apply_quality_score?: number;
-  [key: string]: any;
+  job_apply_link?: string;
+  job_required_skills?: string[];
+  job_posted_at_timestamp?: number;
 };
 
 export type Nullable<T> = T | null;

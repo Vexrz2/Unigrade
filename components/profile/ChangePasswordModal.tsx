@@ -4,10 +4,9 @@ import React, { useState } from 'react';
 import { FiEye, FiEyeOff, FiX } from 'react-icons/fi';
 import { useDoubleViewPasswordToggle } from '../../hooks/useViewPasswordToggle';
 
-export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMessage }: { isOpen: boolean; onClose: () => void; onSubmit: (e: any) => void; errorMessage?: string }) {
+export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMessage }: { isOpen: boolean; onClose: () => void; onSubmit: (e: React.FormEvent<HTMLFormElement>) => void; errorMessage?: string }) {
   const [formData, setFormData] = useState({ currentPassword: '', newPassword: '' });
-  const { isPasswordHidden, passwordInputRef1, passwordInputRef2, toggleViewPassword } = useDoubleViewPasswordToggle();
-
+  const { isPasswordHidden, toggleViewPassword } = useDoubleViewPasswordToggle();
   if (!isOpen) return null;
 
   const { currentPassword, newPassword } = formData;
@@ -26,14 +25,14 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMe
         <form onSubmit={onSubmit} className='w-3/4 mx-auto my-4 flex flex-col items-center'>
           <div className="form-group mb-4 relative w-full">
             <label className='block text-gray-700 text-sm font-bold mb-2'>Current password</label>
-            <input type="password" name="currentPassword" value={currentPassword} onChange={onChange} required ref={passwordInputRef1} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+            <input type={isPasswordHidden ? "password" : "text"} name="currentPassword" value={currentPassword} onChange={onChange} required className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
             <button type="button" onClick={toggleViewPassword} className="absolute inset-y-12 end-0 flex items-center px-3 cursor-pointer rounded-e-md focus:outline-none">
               {isPasswordHidden ? <FiEye /> : <FiEyeOff />}
             </button>
           </div>
           <div className="form-group mb-4 relative w-full">
             <label className='block text-gray-700 text-sm font-bold mb-2'>New password</label>
-            <input type="password" name="newPassword" value={newPassword} onChange={onChange} required ref={passwordInputRef2} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+            <input type={isPasswordHidden ? "password" : "text"} name="newPassword" value={newPassword} onChange={onChange} required className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
             <button type="button" onClick={toggleViewPassword} className="absolute inset-y-12 end-0 flex items-center px-3 cursor-pointer rounded-e-md focus:outline-none">
               {isPasswordHidden ? <FiEye /> : <FiEyeOff />}
             </button>

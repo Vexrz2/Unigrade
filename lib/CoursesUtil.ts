@@ -40,14 +40,14 @@ export const getMaxImprovement = (courses: Course[]) => {
 export const getDegreeProgress = (user: User | null) => {
   if (!user) return NaN;
   const totalCredits = getTotalCredit(user.courses);
-  const creditRequirement = user.degree.creditRequirement;
+  const creditRequirement = user.degree?.creditRequirement ?? 120;
   return Math.min((totalCredits / creditRequirement) * 100, 100);
 };
 
 export const getFinalAverageRange = (user: User | null) => {
-  if (!user) return NaN as any;
+  if (!user) return { low: 0, high: 0, softLow: 0, softHigh: 0 };
   const totalCredits = _.sumBy(user.courses, (course) => course.courseCredit);
-  const creditRequirement = user.degree.creditRequirement;
+  const creditRequirement = user.degree?.creditRequirement ?? 120;
   const weightedAverage = getWeightedAverage(user.courses);
   const low = (weightedAverage * totalCredits) / creditRequirement + ((creditRequirement - totalCredits) * 60) / creditRequirement;
   const high = (weightedAverage * totalCredits) / creditRequirement + ((creditRequirement - totalCredits) * 100) / creditRequirement;

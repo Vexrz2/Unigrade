@@ -1,19 +1,24 @@
 "use client";
 
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import _ from 'lodash';
 import { UserContext } from '../context/UserContext';
 import faviconImage from '../app/favicon.png';
+import { FiMenu, FiX } from 'react-icons/fi';
 
 export default function Navbar() {
   const ctx = useContext(UserContext);
   const user = ctx?.user ?? null;
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => pathname === path;
+  
+  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   const getNavLinkClass = (path: string) => {
     const base = "px-4 py-2 rounded-lg transition-colors duration-200 font-medium";
@@ -24,7 +29,7 @@ export default function Navbar() {
 
   if (!_.isEmpty(user)) {
     return (
-      <nav className="navbar bg-linear-to-r from-theme4 to-theme4 shadow-md border-b border-theme3">
+      <nav className="navbar bg-linear-to-r from-theme4 to-theme4 shadow-md border-b border-theme3 relative">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <Image src={faviconImage} alt="Unigrade Logo" width={40} height={40} className="rounded-lg" />
@@ -32,21 +37,44 @@ export default function Navbar() {
               Unigrade
             </Link>
           </div>
-          <ul className="flex flex-row gap-1 items-center">
-            <li><Link href="/" className={getNavLinkClass('/')}>Home</Link></li>
+          
+          {/* Desktop Menu */}
+          <ul className="hidden lg:flex flex-row gap-1 items-center">
             <li><Link href="/dashboard" className={getNavLinkClass('/dashboard')}>Dashboard</Link></li>
             <li><Link href="/courses" className={getNavLinkClass('/courses')}>Courses</Link></li>
             <li><Link href="/study-plan" className={getNavLinkClass('/study-plan')}>Study Plan</Link></li>
             <li><Link href="/career-plan" className={getNavLinkClass('/career-plan')}>Career Planner</Link></li>
             <li className="ml-auto"><Link href="/profile" className={getNavLinkClass('/profile')}>Profile</Link></li>
           </ul>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={toggleMobileMenu}
+            className="lg:hidden text-white p-2 hover:bg-theme3 rounded-lg transition-colors"
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+          </button>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden absolute top-full left-0 right-0 bg-theme4 border-t border-theme3 shadow-lg z-50">
+            <ul className="flex flex-col py-4 px-6 gap-2">
+              <li><Link href="/dashboard" onClick={closeMobileMenu} className={getNavLinkClass('/dashboard') + ' block'}>Dashboard</Link></li>
+              <li><Link href="/courses" onClick={closeMobileMenu} className={getNavLinkClass('/courses') + ' block'}>Courses</Link></li>
+              <li><Link href="/study-plan" onClick={closeMobileMenu} className={getNavLinkClass('/study-plan') + ' block'}>Study Plan</Link></li>
+              <li><Link href="/career-plan" onClick={closeMobileMenu} className={getNavLinkClass('/career-plan') + ' block'}>Career Planner</Link></li>
+              <li className="border-t border-theme3 pt-2 mt-2"><Link href="/profile" onClick={closeMobileMenu} className={getNavLinkClass('/profile') + ' block'}>Profile</Link></li>
+            </ul>
+          </div>
+        )}
       </nav>
     );
   }
 
   return (
-    <nav className="navbar bg-linear-to-r from-theme4 to-theme4 shadow-md border-b border-theme3">
+    <nav className="navbar bg-linear-to-r from-theme4 to-theme4 shadow-md border-b border-theme3 relative">
       <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Image src={faviconImage} alt="Unigrade Logo" width={40} height={40} className="rounded-lg" />
@@ -54,12 +82,32 @@ export default function Navbar() {
             Unigrade
           </Link>
         </div>
-        <ul className="flex gap-4 items-center">
-          <li><Link href="/" className={getNavLinkClass('/')}>Home</Link></li>
+        
+        {/* Desktop Menu */}
+        <ul className="hidden md:flex gap-4 items-center">
           <li><Link href="/register" className={getNavLinkClass('/register')}>Register</Link></li>
           <li><Link href="/login" className={getNavLinkClass('/login')}>Login</Link></li>
         </ul>
+
+        {/* Mobile Menu Button */}
+        <button
+          onClick={toggleMobileMenu}
+          className="md:hidden text-white p-2 hover:bg-theme3 rounded-lg transition-colors"
+          aria-label="Toggle menu"
+        >
+          {isMobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+        </button>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden absolute top-full left-0 right-0 bg-theme4 border-t border-theme3 shadow-lg z-50">
+          <ul className="flex flex-col py-4 px-6 gap-2">
+            <li><Link href="/register" onClick={closeMobileMenu} className={getNavLinkClass('/register') + ' block'}>Register</Link></li>
+            <li><Link href="/login" onClick={closeMobileMenu} className={getNavLinkClass('/login') + ' block'}>Login</Link></li>
+          </ul>
+        </div>
+      )}
     </nav>
   );
 }
