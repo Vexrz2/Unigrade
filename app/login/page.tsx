@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import api from '../../lib/api';
 import { UserContext } from '../../context/UserContext';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
+import { FcGoogle } from 'react-icons/fc';
 import { useViewPasswordToggle } from '../../hooks/useViewPasswordToggle';
 import toast from 'react-hot-toast';
 
@@ -17,6 +18,10 @@ export default function LoginPage() {
   const { isPasswordHidden, inputType, toggleViewPassword } = useViewPasswordToggle();
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const handleGoogleSignIn = () => {
+    window.location.href = '/api/auth/google';
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +56,26 @@ export default function LoginPage() {
                 <p className='text-red-700 text-sm font-medium'>{errorMessage}</p>
               </div>
             )}
+
+            {/* Google Sign-In Button */}
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 font-semibold py-3 px-4 rounded-lg transition-all duration-200 mb-6"
+            >
+              <FcGoogle size={24} />
+              Sign in with Google
+            </button>
+
+            {/* Divider */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-gray-500">Or continue with email</span>
+              </div>
+            </div>
 
             <div className="form-group mb-6">
               <label className='block text-gray-800 text-sm font-semibold mb-3'>Email Address</label>

@@ -17,6 +17,10 @@ export type User = {
   _id?: string;
   name?: string;
   email?: string;
+  authProvider?: 'local' | 'google';
+  googleId?: string;
+  profilePicture?: string;
+  emailVerified?: boolean;
   courses: Course[];
   degree?: Degree;
 };

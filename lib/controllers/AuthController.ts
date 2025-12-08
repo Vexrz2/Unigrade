@@ -3,6 +3,51 @@ import jwt from 'jsonwebtoken';
 import { User } from '@/lib/models/UserModel';
 import Mailjet from 'node-mailjet';
 
+export async function handleGoogleAuth(data: {
+    googleId: string;
+    email: string;
+    name: string;
+    profilePicture?: string;
+}) {
+    const { googleId, email, name, profilePicture } = data;
+
+    // Check if user already exists with this Google ID
+    let user = await User.findOne({ googleId });
+
+    if (!user) {
+        // Check if user exists with this email (might be a local account)
+        const existingEmailUser = await User.findOne({ email });
+        
+        if (existingEmailUser) {
+            // User exists with email but different auth provider
+            if (existingEmailUser.authProvider === 'local') {
+                throw new Error('An account with this email already exists. Please sign in with email and password.');
+            }
+        }
+
+        // Create new user with Google OAuth
+        const username = name.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000);
+        
+        user = new User({
+            username,
+            email,
+            googleId,
+            authProvider: 'google',
+            profilePicture,
+            emailVerified: true,
+            degree: { type: '', major: '', creditRequirement: 120 },
+            courses: [],
+        });
+
+        await user.save();
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || '', { expiresIn: '1h' });
+
+    return { token, user };
+}
+
 export async function registerUser(data: {
     username: string;
     password: string;
@@ -41,6 +86,8 @@ export async function registerUser(data: {
         username,
         email,
         password: hashedPassword,
+        authProvider: 'local',
+        emailVerified: false,
         degree: { type: '', major: major, creditRequirement: 120 },
         courses: [],
     });
@@ -60,6 +107,16 @@ export async function loginUser(data: { email: string; password: string }) {
         throw new Error('Invalid email');
     }
 
+    // Check if user is using OAuth
+    if (user.authProvider === 'google') {
+        throw new Error('This account uses Google Sign-In. Please use the "Sign in with Google" button.');
+    }
+
+    // Verify password for local users
+    if (!user.password) {
+        throw new Error('Invalid authentication method');
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
         throw new Error('Invalid password');
@@ -73,6 +130,11 @@ export async function recoverUserPassword(email: string) {
     const user = await User.findOne({ email });
     if (!user) {
         throw new Error('No user associated with email');
+    }
+
+    // Check if user is using OAuth
+    if (user.authProvider === 'google') {
+        throw new Error('This account uses Google Sign-In. Password recovery is not available for Google accounts.');
     }
 
     const mailjet = new Mailjet({
@@ -117,6 +179,16 @@ export async function updateUserPassword(userId: string, data: { currentPassword
     const user = await User.findById(userId);
     if (!user) {
         throw new Error('User not found');
+    }
+
+    // Check if user is using OAuth
+    if (user.authProvider === 'google') {
+        throw new Error('Password change is not available for Google accounts.');
+    }
+
+    // Verify password for local users
+    if (!user.password) {
+        throw new Error('Invalid authentication method');
     }
 
     const isMatch = await bcrypt.compare(currentPassword, user.password);

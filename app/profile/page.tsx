@@ -102,6 +102,28 @@ export default function ProfilePage() {
           <ProfileSkeleton />
         ) : (
           <>
+            {/* Profile Picture (for OAuth users) */}
+            {user?.profilePicture && (
+              <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+                <h2 className='text-2xl font-bold text-gray-800 mb-6'>Profile Picture</h2>
+                <div className="flex items-center gap-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src={user.profilePicture} 
+                    alt="Profile" 
+                    className="w-20 h-20 rounded-full border-2 border-theme3"
+                  />
+                  <div>
+                    <div className="text-gray-800 font-semibold">{user.username}</div>
+                    <div className="text-sm text-gray-600">{user.email}</div>
+                    {user.authProvider === 'google' && (
+                      <div className="text-xs text-theme3 font-semibold mt-1">Google Account</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Profile Form */}
             <div className="bg-white rounded-lg shadow-md p-8 mb-8">
               <h2 className='text-2xl font-bold text-gray-800 mb-6'>Account Information</h2>
@@ -155,13 +177,20 @@ export default function ProfilePage() {
             <div className="bg-white rounded-lg shadow-md p-8 mb-8">
               <h2 className='text-2xl font-bold text-gray-800 mb-6'>Security</h2>
               <div className="space-y-4">
-                <button
-                  onClick={passwordModal.openModal}
-                  className='w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors'
-                >
-                  <div className='font-semibold text-gray-800'>Change Password</div>
-                  <div className='text-sm text-gray-600'>Update your password regularly for security</div>
-                </button>
+                {user?.authProvider === 'local' ? (
+                  <button
+                    onClick={passwordModal.openModal}
+                    className='w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors'
+                  >
+                    <div className='font-semibold text-gray-800'>Change Password</div>
+                    <div className='text-sm text-gray-600'>Update your password regularly for security</div>
+                  </button>
+                ) : (
+                  <div className='w-full text-left px-4 py-3 bg-gray-50 rounded-lg border border-gray-200'>
+                    <div className='font-semibold text-gray-500'>Change Password</div>
+                    <div className='text-sm text-gray-500'>Not available for Google accounts. Manage your password through Google.</div>
+                  </div>
+                )}
               </div>
             </div>
 
