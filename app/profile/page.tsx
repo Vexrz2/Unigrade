@@ -173,11 +173,11 @@ export default function ProfilePage() {
               </form>
             </div>
 
-            {/* Security Section */}
+            {/* Account Actions */}
             <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-              <h2 className='text-2xl font-bold text-gray-800 mb-6'>Security</h2>
+              <h2 className='text-2xl font-bold text-gray-800 mb-6'>Account Actions</h2>
               <div className="space-y-4">
-                {user?.authProvider === 'local' ? (
+                  {user?.authProvider === 'local' && (
                   <button
                     onClick={passwordModal.openModal}
                     className='w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors'
@@ -185,12 +185,14 @@ export default function ProfilePage() {
                     <div className='font-semibold text-gray-800'>Change Password</div>
                     <div className='text-sm text-gray-600'>Update your password regularly for security</div>
                   </button>
-                ) : (
-                  <div className='w-full text-left px-4 py-3 bg-gray-50 rounded-lg border border-gray-200'>
-                    <div className='font-semibold text-gray-500'>Change Password</div>
-                    <div className='text-sm text-gray-500'>Not available for Google accounts. Manage your password through Google.</div>
-                  </div>
-                )}
+                  )}
+                  <button
+                    onClick={logoutUser}
+                    className='w-full text-left px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors'
+                  >
+                    <div className='font-semibold text-gray-800'>Logout</div>
+                    <div className='text-sm text-gray-600'>Sign out of your account</div>
+                  </button>
               </div>
             </div>
 
@@ -198,14 +200,6 @@ export default function ProfilePage() {
             <div className="bg-white rounded-lg shadow-md p-8 border-l-4 border-red-500">
               <h2 className='text-2xl font-bold text-gray-800 mb-6'>Danger Zone</h2>
               <div className="space-y-4">
-                <button
-                  onClick={logoutUser}
-                  className='w-full text-left px-4 py-3 bg-orange-50 hover:bg-orange-100 rounded-lg border border-orange-200 transition-colors'
-                >
-                  <div className='font-semibold text-gray-800'>Logout</div>
-                  <div className='text-sm text-gray-600'>Sign out of your account</div>
-                </button>
-
                 <button
                   onClick={deleteModal.openModal}
                   className='w-full text-left px-4 py-3 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors'
