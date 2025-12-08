@@ -8,8 +8,8 @@ export async function getUser(userId: string) {
     return user;
 }
 
-export async function updateUser(userId: string, data: { username: string; email: string; major: string }) {
-    const { username, email, major } = data;
+export async function updateUser(userId: string, data: { username: string; email: string; major: string; profilePicture?: string }) {
+    const { username, email, major, profilePicture } = data;
     const user = await User.findById(userId);
     if (!user) {
         throw new Error('User not found');
@@ -31,7 +31,12 @@ export async function updateUser(userId: string, data: { username: string; email
         throw new Error('Invalid Email');
     }
 
-    await User.findByIdAndUpdate(userId, { username, email, degree: { major } });
+    const updateData: any = { username, email, degree: { major } };
+    if (profilePicture) {
+        updateData.profilePicture = profilePicture;
+    }
+
+    await User.findByIdAndUpdate(userId, updateData);
     const updatedUser = await User.findById(userId);
     return updatedUser;
 }

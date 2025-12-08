@@ -22,24 +22,51 @@ export default function ProfilePage() {
   const passwordModal = useModal();
   const deleteModal = useModal();
   const [changePasswordErrorMessage, setChangePasswordErrorMessage] = useState('');
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   useEffect(() => {
     const setUserData = async () => {
       if (user?.degree) await setFormData({ username: user.username ?? '', email: user.email ?? '', major: user.degree.major ?? '' });
     else if (user?.username && user?.email) await setFormData({ username: user.username, email: user.email, major: '' });
+      if (user?.profilePicture) setProfilePicture(user.profilePicture);
     };
     setUserData();
   }, [user]);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFormData({ ...formData, [e.target.name]: e.target.value } as UserProfileData);
 
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfilePictureFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePicture(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      updateUser({ ...formData, profilePictureFile: file });
+    }
+  };
+
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateUser(formData);
   };
 
-  const updateUser = async (payload: { username: string; email: string; major: string }) => {
+  const updateUser = async (payload: { username: string; email: string; major: string, profilePictureFile?: File | null }) => {
     try {
-      const res = await api.patch('/users/update', payload);
+      const formData = new FormData();
+      formData.append('username', payload.username);
+      formData.append('email', payload.email);
+      formData.append('major', payload.major);
+      formData.append('profilePicture', payload.profilePictureFile || profilePictureFile || new Blob());
+      
+      const res = await api.patch('/users/update', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       toast.success('Profile updated successfully!');
       if (setUser) setUser(res.data.updatedUser);
     } catch (err: unknown) {
@@ -102,27 +129,48 @@ export default function ProfilePage() {
           <ProfileSkeleton />
         ) : (
           <>
-            {/* Profile Picture (for OAuth users) */}
-            {user?.profilePicture && (
-              <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-                <h2 className='text-2xl font-bold text-gray-800 mb-6'>Profile Picture</h2>
-                <div className="flex items-center gap-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
-                    src={user.profilePicture} 
-                    alt="Profile" 
-                    className="w-20 h-20 rounded-full border-2 border-theme3"
-                  />
-                  <div>
-                    <div className="text-gray-800 font-semibold">{user.username}</div>
-                    <div className="text-sm text-gray-600">{user.email}</div>
-                    {user.authProvider === 'google' && (
-                      <div className="text-xs text-theme3 font-semibold mt-1">Google Account</div>
-                    )}
-                  </div>
+            {/* Profile Picture */}
+            <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+              <h2 className='text-2xl font-bold text-gray-800 mb-6'>Profile Picture</h2>
+              <div className="flex items-center gap-6">
+                {/* Profile Picture Display */}
+                <div className="relative">
+                  {profilePicture ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img 
+                      src={profilePicture} 
+                      alt="Profile" 
+                      className="w-24 h-24 rounded-full border-2 border-theme3 object-cover"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full border-2 border-theme3 bg-theme3 flex items-center justify-center">
+                      <span className="text-white text-3xl font-bold">
+                        {user?.username?.[0]?.toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Upload Section */}
+                <div className="flex-1">
+                  <div className="text-gray-800 font-semibold mb-1">{user?.username}</div>
+                  <div className="text-sm text-gray-600 mb-3">{user?.email}</div>
+                  {user?.authProvider === 'google' && (
+                    <div className="text-xs text-theme3 font-semibold mb-3">Google Account</div>
+                  )}
+                  <label className="cursor-pointer inline-block bg-theme3 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={onFileChange}
+                      className="hidden"
+                    />
+                    Upload New Picture
+                  </label>
+                  <p className="text-xs text-gray-500 mt-2">JPG, PNG or GIF (max. 5MB)</p>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Profile Form */}
             <div className="bg-white rounded-lg shadow-md p-8 mb-8">
@@ -176,15 +224,15 @@ export default function ProfilePage() {
             {/* Account Actions */}
             <div className="bg-white rounded-lg shadow-md p-8 mb-8">
               <h2 className='text-2xl font-bold text-gray-800 mb-6'>Account Actions</h2>
-              <div className="space-y-4">
+                <div className="space-y-4">
                   {user?.authProvider === 'local' && (
-                  <button
-                    onClick={passwordModal.openModal}
-                    className='w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors'
-                  >
-                    <div className='font-semibold text-gray-800'>Change Password</div>
-                    <div className='text-sm text-gray-600'>Update your password regularly for security</div>
-                  </button>
+                    <button
+                      onClick={passwordModal.openModal}
+                      className='w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors'
+                    >
+                      <div className='font-semibold text-gray-800'>Change Password</div>
+                      <div className='text-sm text-gray-600'>Update your password regularly for security</div>
+                    </button>
                   )}
                   <button
                     onClick={logoutUser}
@@ -193,7 +241,7 @@ export default function ProfilePage() {
                     <div className='font-semibold text-gray-800'>Logout</div>
                     <div className='text-sm text-gray-600'>Sign out of your account</div>
                   </button>
-              </div>
+                </div>
             </div>
 
             {/* Danger Zone */}
