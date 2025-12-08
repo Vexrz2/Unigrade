@@ -42,7 +42,7 @@ export default function DashboardPage() {
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center bg-linear-to-br from-theme2 to-theme1 px-4 py-12">
+        <div className="min-h-screen flex flex-col items-center bg-theme2 px-4 py-12">
             <div className="w-full max-w-6xl">
                 {/* Header */}
                 <div className="mb-10">

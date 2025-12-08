@@ -8,19 +8,19 @@ const features = [
     icon: <FaChartLine className="w-8 h-8" />,
     title: "GPA Tracking",
     description: "Monitor your academic progress with real-time GPA calculations and what-if scenarios to plan your path to success.",
-    color: "from-blue-500 to-cyan-500"
+    color: "bg-blue-500"
   },
   {
     icon: <FaCalendarAlt className="w-8 h-8" />,
     title: "Study Planner",
     description: "Organize your study schedule, track exam dates, and never miss an important deadline with smart reminders.",
-    color: "from-purple-500 to-pink-500"
+    color: "bg-purple-500"
   },
   {
     icon: <FaBriefcase className="w-8 h-8" />,
     title: "Career Planning",
     description: "Discover internships and job opportunities matched to your skills with personalized career guidance.",
-    color: "from-orange-500 to-red-500"
+    color: "bg-orange-500"
   }
 ];
 
@@ -44,15 +44,9 @@ const steps = [
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-linear-to-br from-theme2 to-theme1">
+    <div className="min-h-screen bg-theme2">
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-20 pb-32 px-4">
-        {/* Background decorations */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-theme3/30 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-theme4/30 rounded-full blur-3xl"></div>
-        </div>
-        
         <div className="max-w-6xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 bg-white/20 text-gray-800 px-4 py-2 rounded-full text-sm font-medium mb-8 backdrop-blur-sm">
             <FaGraduationCap className="w-4 h-4" />
@@ -61,7 +55,7 @@ export default function Home() {
           
           <h1 className="text-5xl md:text-7xl font-bold text-gray-800 mb-6">
             Your Academic Journey,{" "}
-            <span className="bg-linear-to-r from-theme3 to-theme4 bg-clip-text text-transparent">
+            <span className="text-theme3">
               Simplified
             </span>
           </h1>
@@ -106,7 +100,7 @@ export default function Home() {
                 key={index} 
                 className="group bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-theme3/30 hover:-translate-y-2"
               >
-                <div className={`inline-flex p-4 rounded-xl bg-linear-to-r ${feature.color} text-white mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                <div className={`inline-flex p-4 rounded-xl ${feature.color} text-white mb-6 group-hover:scale-110 transition-transform duration-300`}>
                   {feature.icon}
                 </div>
                 <h3 className="text-2xl font-bold text-gray-800 mb-3">
@@ -138,11 +132,11 @@ export default function Home() {
               <div key={index} className="relative">
                 {/* Connector line */}
                 {index < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-12 left-[60%] w-full h-0.5 bg-linear-to-r from-theme3 to-theme4"></div>
+                  <div className="hidden md:block absolute top-12 left-[60%] w-full h-0.5 bg-theme3"></div>
                 )}
                 
                 <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100 relative z-10">
-                  <div className="w-12 h-12 bg-linear-to-r from-theme3 to-theme4 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
+                  <div className="w-12 h-12 bg-theme3 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
                     {step.number}
                   </div>
                   <h3 className="text-xl font-bold text-gray-800 mb-3">
@@ -161,7 +155,7 @@ export default function Home() {
       {/* CTA Section */}
       <section className="py-24 px-4">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-linear-to-r from-theme3 to-theme4 rounded-3xl p-12 text-center text-white relative overflow-hidden">
+          <div className="bg-theme3 rounded-3xl p-12 text-center text-white relative overflow-hidden">
             {/* Background decoration */}
             <div className="absolute inset-0 overflow-hidden">
               <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-2xl"></div>

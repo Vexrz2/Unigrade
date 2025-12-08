@@ -29,7 +29,7 @@ export default function Navbar() {
 
   if (!_.isEmpty(user)) {
     return (
-      <nav className="navbar bg-linear-to-r from-theme4 to-theme4 shadow-md border-b border-theme3 relative">
+      <nav className="navbar bg-theme4 shadow-md border-b border-theme3 relative">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <Image src={faviconImage} alt="Unigrade Logo" width={40} height={40} className="rounded-lg" />
@@ -74,7 +74,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="navbar bg-linear-to-r from-theme4 to-theme4 shadow-md border-b border-theme3 relative">
+    <nav className="navbar bg-theme4 shadow-md border-b border-theme3 relative">
       <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Image src={faviconImage} alt="Unigrade Logo" width={40} height={40} className="rounded-lg" />

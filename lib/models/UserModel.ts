@@ -12,6 +12,21 @@ const degreeSchema = new mongoose.Schema({
     type: { type: String, default: 'Other' },
 });
 
+const savedJobSchema = new mongoose.Schema({
+    job_id: { type: String, required: true },
+    job_title: { type: String },
+    job_job_title: { type: String },
+    job_description: { type: String },
+    employer_name: { type: String },
+    employer_logo: { type: String },
+    job_city: { type: String },
+    job_country: { type: String },
+    job_apply_quality_score: { type: Number },
+    job_apply_link: { type: String },
+    job_required_skills: [{ type: String }],
+    job_posted_at_timestamp: { type: Number },
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: false }, // Optional for OAuth users
@@ -22,6 +37,7 @@ const userSchema = new mongoose.Schema({
     emailVerified: { type: Boolean, default: false }, // OAuth users are pre-verified
     courses: [courseSchema],
     degree: degreeSchema,
+    savedJobs: [savedJobSchema], // Array of saved job objects
 });
 
 // Delete the cached model in development to allow hot reload

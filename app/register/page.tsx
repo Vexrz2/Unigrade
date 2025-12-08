@@ -40,11 +40,11 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-theme4 to-theme2 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-theme2 px-4 py-12">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-lg shadow-xl overflow-hidden">
           {/* Header */}
-          <div className="bg-linear-to-r from-theme4 to-theme3 px-8 py-10">
+          <div className="bg-theme3 px-8 py-10">
             <h1 className='text-4xl font-bold text-white text-center'>Create Account</h1>
             <p className='text-theme2 text-center mt-2 text-sm'>Join Unigrade to plan your future</p>
           </div>
@@ -161,7 +161,7 @@ export default function RegisterPage() {
 
             <button 
               type="submit" 
-              className='w-full bg-linear-to-r from-theme3 to-theme4 hover:shadow-lg text-white font-bold py-3 px-4 rounded-lg transition-shadow duration-200'
+              className='w-full bg-theme3 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors'
             >
               Create Account
             </button>

@@ -112,7 +112,7 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
     >
       <div className="relative w-full max-w-md mx-4 bg-white rounded-lg shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="bg-linear-to-r from-theme4 to-theme3 px-8 py-6">
+        <div className="bg-theme3 px-8 py-6">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-white">Edit Course</h3>
             <button 
@@ -206,7 +206,7 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
             <button 
               type="submit" 
               disabled={editCourseMutation.isPending}
-              className='flex-1 bg-linear-to-r from-theme3 to-theme4 hover:shadow-lg text-white font-bold py-3 px-4 rounded-lg transition-shadow duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+              className='flex-1 bg-theme3 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
             >
               {editCourseMutation.isPending ? 'Saving...' : 'Save Changes'}
             </button>

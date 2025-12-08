@@ -145,7 +145,7 @@ export default function StudyPlanPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-linear-to-br from-theme2 to-theme1 px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center bg-theme2 px-4 py-12">
       <div className="w-full max-w-7xl">
         {/* Header */}
         <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -155,7 +155,7 @@ export default function StudyPlanPage() {
           </div>
           <button
             onClick={gpaCalculatorModal.openModal}
-            className="flex items-center gap-2 bg-linear-to-r from-theme3 to-theme4 hover:shadow-lg text-white font-bold py-3 px-6 rounded-lg transition-shadow duration-200"
+            className="flex items-center gap-2 bg-theme3 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
           >
             <FaCalculator size={20} />
             What-If Calculator

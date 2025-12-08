@@ -3,7 +3,7 @@ import faviconImage from '../app/favicon.png';
 
 export default function Footer() {
   return (
-    <footer className="footer bg-linear-to-r from-theme4 to-theme4 border-t border-theme3 py-12">
+    <footer className="footer bg-theme4 border-t border-theme3 py-12">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* About Section */}

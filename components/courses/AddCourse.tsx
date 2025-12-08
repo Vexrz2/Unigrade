@@ -154,7 +154,7 @@ export default function AddCourse() {
         <button 
           type="submit" 
           disabled={addCourseMutation.isPending}
-          className='w-full bg-linear-to-r from-theme3 to-theme4 hover:shadow-lg text-white font-bold py-3 px-4 rounded-lg transition-shadow duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+          className='w-full bg-theme3 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
         >
           {addCourseMutation.isPending ? 'Adding...' : 'Add Course'}
         </button>

@@ -23,6 +23,7 @@ export type User = {
   emailVerified?: boolean;
   courses: Course[];
   degree?: Degree;
+  savedJobs?: JobListing[];
 };
 
 export type UserProfileData = {

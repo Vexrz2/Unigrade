@@ -13,6 +13,8 @@ import { HiDocumentText } from 'react-icons/hi';
 import type { JobListing } from '@/types';
 import { JobListSkeleton } from '@/components/Skeleton';
 import toast from 'react-hot-toast';
+import Image from 'next/image';
+import { useSavedJobs, useToggleSaveJob } from '@/hooks/useSavedJobs';
 
 // Skills commonly associated with majors
 const MAJOR_SKILLS: Record<string, string[]> = {
@@ -81,9 +83,12 @@ export default function CareerPlanPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [jobListings, setJobListings] = useState<JobListing[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'search' | 'saved' | 'resources'>('search');
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Use Tanstack Query for saved jobs
+  const { data: savedJobsData = [], isLoading: savedJobsLoading } = useSavedJobs();
+  const toggleSaveJobMutation = useToggleSaveJob();
 
   const { employmentType, location } = formData;
   const userMajor = user?.degree?.major ?? 'default';
@@ -128,28 +133,9 @@ export default function CareerPlanPage() {
     ).slice(0, 3);
   }, [relevantSkills]);
 
-  // Load saved jobs from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('savedJobs');
-    if (saved) {
-      setSavedJobs(new Set(JSON.parse(saved)));
-    }
-  }, []);
-
-  // Save jobs to localStorage
-  const toggleSaveJob = (jobId: string) => {
-    setSavedJobs(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(jobId)) {
-        newSet.delete(jobId);
-        toast.success('Job removed from saved');
-      } else {
-        newSet.add(jobId);
-        toast.success('Job saved to watchlist');
-      }
-      localStorage.setItem('savedJobs', JSON.stringify([...newSet]));
-      return newSet;
-    });
+  // Toggle save job using mutation
+  const toggleSaveJob = (job: JobListing) => {
+    toggleSaveJobMutation.mutate(job);
   };
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => 
@@ -196,11 +182,11 @@ export default function CareerPlanPage() {
 
   // Get saved job listings
   const savedJobListings = useMemo(() => {
-    return jobListings.filter(job => savedJobs.has(job.job_id ?? ''));
-  }, [jobListings, savedJobs]);
+    return savedJobsData;
+  }, [savedJobsData]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-linear-to-br from-theme2 to-theme1   px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center bg-theme2 px-4 py-12">
       <div className="w-full max-w-7xl">
         {/* Header */}
         <div className="mb-8">
@@ -230,7 +216,7 @@ export default function CareerPlanPage() {
             }`}
           >
             <FaHeart className="inline mr-2" />
-            Saved ({savedJobs.size})
+            Saved ({savedJobsData.length})
           </button>
           <button
             onClick={() => setActiveTab('resources')}
@@ -304,7 +290,7 @@ export default function CareerPlanPage() {
                 <button 
                   type="submit" 
                   disabled={isLoading}
-                  className='w-full lg:w-auto bg-linear-to-r from-theme3 to-theme4 hover:shadow-lg text-white font-bold py-3 px-8 rounded-lg transition-shadow duration-200 disabled:opacity-50'
+                  className='w-full lg:w-auto bg-theme3 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-lg transition-colors disabled:opacity-50'
                 >
                   {isLoading ? 'Searching...' : 'Search Jobs'}
                 </button>
@@ -339,7 +325,7 @@ export default function CareerPlanPage() {
                 {jobListings.map((job, idx) => {
                   const matchScore = calculateMatchScore(job);
                   const missingSkills = getMissingSkills(job);
-                  const isSaved = savedJobs.has(job.job_id ?? '');
+                  const isSaved = savedJobsData.some(savedJob => savedJob.job_id === job.job_id);
                   
                   return (
                     <div 
@@ -348,7 +334,7 @@ export default function CareerPlanPage() {
                     >
                       {/* Save Button */}
                       <button
-                        onClick={() => toggleSaveJob(job.job_id ?? '')}
+                        onClick={() => toggleSaveJob(job)}
                         className="absolute top-4 right-4 p-2 hover:bg-gray-100 :bg-dark-card-hover rounded-full transition-colors"
                         aria-label={isSaved ? 'Remove from saved' : 'Save job'}
                       >
@@ -363,9 +349,9 @@ export default function CareerPlanPage() {
                       <div className="flex items-start gap-4 mb-4 pr-8">
                         <div className="w-14 h-14 bg-gray-100  rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
                           {job.employer_logo ? (
-                            <img 
+                            <Image 
                               src={job.employer_logo} 
-                              alt={job.employer_name ?? 'Company'} 
+                              alt={job.employer_name ?? 'Company Logo'} 
                               width={56}
                               height={56}
                               className="object-contain w-14 h-14"
@@ -477,7 +463,7 @@ export default function CareerPlanPage() {
                     className="bg-white  rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow border border-gray-100  relative"
                   >
                     <button
-                      onClick={() => toggleSaveJob(job.job_id ?? '')}
+                      onClick={() => toggleSaveJob(job)}
                       className="absolute top-4 right-4 p-2 hover:bg-gray-100 :bg-dark-card-hover rounded-full transition-colors"
                     >
                       <FaHeart className="text-red-500" size={18} />
@@ -486,7 +472,7 @@ export default function CareerPlanPage() {
                     <div className="flex items-start gap-4 mb-4 pr-8">
                       <div className="w-14 h-14 bg-gray-100  rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
                         {job.employer_logo ? (
-                          <img 
+                          <Image 
                             src={job.employer_logo} 
                             alt={job.employer_name ?? 'Company'} 
                             width={56}
