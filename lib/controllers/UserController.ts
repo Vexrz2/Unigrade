@@ -31,7 +31,7 @@ export async function updateUser(userId: string, data: { username: string; email
         throw new Error('Invalid Email');
     }
 
-    const updateData: any = { username, email, degree: { major } };
+    const updateData: Record<string, unknown> = { username, email, degree: { major } };
     if (profilePicture) {
         updateData.profilePicture = profilePicture;
     }

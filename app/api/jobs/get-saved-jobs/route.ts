@@ -17,8 +17,9 @@ export async function GET(request: NextRequest) {
         }
 
         return NextResponse.json({ savedJobs: user.savedJobs || [] }, { status: 200 });
-    } catch (error: any) {
+    } catch (error) {
         console.error('Get saved jobs error:', error);
-        return NextResponse.json({ message: error.message || 'Failed to get saved jobs' }, { status: 500 });
+        const message = error instanceof Error ? error.message : 'Failed to get saved jobs';
+        return NextResponse.json({ message }, { status: 500 });
     }
 }

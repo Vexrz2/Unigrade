@@ -1,4 +1,5 @@
 import { User } from '@/lib/models/UserModel';
+import { Course } from '@/types';
 
 export async function addCourse(userId: string, data: { courseName: string; courseGrade: number; courseCredit: number }) {
     const { courseName, courseGrade, courseCredit } = data;
@@ -25,7 +26,7 @@ export async function addCourse(userId: string, data: { courseName: string; cour
         courseCredit,
     };
 
-    user.courses.push(newCourse as any);
+    user.courses.push(newCourse);
     await user.save();
     return newCourse;
 }
@@ -38,7 +39,7 @@ export async function getCourses(userId: string) {
     return user.courses;
 }
 
-export async function updateCourse(userId: string, courseId: string, updatedCourseData: any) {
+export async function updateCourse(userId: string, courseId: string, updatedCourseData: Partial<Course>) {
     const user = await User.findById(userId);
     if (!user) {
         throw new Error('User not found');
@@ -60,7 +61,7 @@ export async function removeCourse(userId: string, courseId: string) {
         throw new Error('User not found');
     }
 
-    const courseIndex = user.courses.findIndex((course: any) => courseId === course._id.toString());
+    const courseIndex = user.courses.findIndex((course) => courseId === course._id.toString());
     if (courseIndex === -1) {
         throw new Error('Course not found');
     }

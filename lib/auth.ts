@@ -16,7 +16,8 @@ export async function authMiddleware(request: NextRequest) {
             return null;
         }
         return decoded;
-    } catch (err) {
+    } catch (error) {
+        console.error('Authentication error:', error);
         return null;
     }
 }

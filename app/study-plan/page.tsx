@@ -119,9 +119,25 @@ export default function StudyPlanPage() {
     },
   }), [courseChartData]);
 
+  // Initialize form data from user degree
+  const initialFormData = useMemo(() => {
+    if (user?.degree) {
+      return {
+        degreeType: user.degree.type ?? '',
+        major: user.degree.major ?? '',
+        creditRequirement: user.degree.creditRequirement ?? 120
+      };
+    }
+    return {
+      degreeType: '',
+      major: '',
+      creditRequirement: 120
+    };
+  }, [user?.degree]);
+
   useEffect(() => {
-    if (user && user.degree) setFormData({ degreeType: user.degree.type ?? '', major: user.degree.major ?? '', creditRequirement: user.degree.creditRequirement ?? 120 });
-  }, [user]);
+    setFormData(initialFormData);
+  }, [initialFormData]);
 
   const { degreeType, major, creditRequirement } = formData;
 

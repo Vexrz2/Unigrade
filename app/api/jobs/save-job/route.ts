@@ -22,13 +22,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ message: 'User not found' }, { status: 404 });
         }
 
-        // Initialize savedJobs if it doesn't exist
-        if (!user.savedJobs) {
-            user.savedJobs = [] as any;
-        }
-
         // Toggle save/unsave
-        const jobIndex = user.savedJobs.findIndex((j: any) => j.job_id === job.job_id);
+        const jobIndex = user.savedJobs.findIndex((j) => j.job_id === job.job_id);
         if (jobIndex > -1) {
             user.savedJobs.splice(jobIndex, 1);
             await user.save();
@@ -38,8 +33,9 @@ export async function POST(request: NextRequest) {
             await user.save();
             return NextResponse.json({ message: 'Job saved successfully', savedJobs: user.savedJobs }, { status: 200 });
         }
-    } catch (error: any) {
+    } catch (error) {
         console.error('Save job error:', error);
-        return NextResponse.json({ message: error.message || 'Failed to save job' }, { status: 500 });
+        const message = error instanceof Error ? error.message : 'Failed to save job';
+        return NextResponse.json({ message }, { status: 500 });
     }
 }

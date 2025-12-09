@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const clientId = process.env.GOOGLE_CLIENT_ID;
         const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/google/callback`;
@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
         googleAuthUrl.searchParams.append('prompt', 'consent');
 
         return NextResponse.redirect(googleAuthUrl.toString());
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to initiate Google OAuth';
+        return NextResponse.json({ message }, { status: 500 });
     }
 }

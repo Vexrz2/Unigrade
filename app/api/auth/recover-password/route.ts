@@ -8,7 +8,8 @@ export async function POST(request: NextRequest) {
         const { email } = await request.json();
         const result = await recoverUserPassword(email);
         return NextResponse.json(result, { status: 200 });
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 400 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to recover password';
+        return NextResponse.json({ message }, { status: 400 });
     }
 }

@@ -1,7 +1,6 @@
 export type Course = {
   _id?: string;
   courseName?: string;
-  courseCode?: string;
   courseCredit: number;
   courseGrade: number;
 };

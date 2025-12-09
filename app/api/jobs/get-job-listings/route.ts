@@ -11,11 +11,8 @@ export async function POST(request: NextRequest) {
             params: queryParams,
         });
         return NextResponse.json(response.data, { status: 200 });
-    } catch (error: any) {
-        console.error('Error fetching data from API:', error.message);
-        return NextResponse.json(
-            { error: 'Failed to fetch data from the job search API' },
-            { status: 500 }
-        );
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to fetch job listings';
+        return NextResponse.json({ message }, { status: 400 });
     }
 }

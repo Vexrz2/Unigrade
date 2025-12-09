@@ -13,7 +13,8 @@ export async function PATCH(request: NextRequest) {
         const data = await request.json();
         const result = await updateDegree(auth.userId, data);
         return NextResponse.json({ updatedUser: result }, { status: 201 });
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 400 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to update degree';
+        return NextResponse.json({ message }, { status: 400 });
     }
 }

@@ -87,7 +87,7 @@ export default function CareerPlanPage() {
   const [hasSearched, setHasSearched] = useState(false);
 
   // Use Tanstack Query for saved jobs
-  const { data: savedJobsData = [], isLoading: savedJobsLoading } = useSavedJobs();
+  const { data: savedJobsData = [] } = useSavedJobs();
   const toggleSaveJobMutation = useToggleSaveJob();
 
   const { employmentType, location } = formData;

@@ -13,7 +13,8 @@ export async function POST(request: NextRequest) {
         const data = await request.json();
         const result = await updateUserPassword(auth.userId, data);
         return NextResponse.json(result, { status: 200 });
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 400 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to change password';
+        return NextResponse.json({ message }, { status: 400 });
     }
 }

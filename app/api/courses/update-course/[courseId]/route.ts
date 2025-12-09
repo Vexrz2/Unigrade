@@ -14,7 +14,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         const data = await request.json();
         const result = await updateCourse(auth.userId, courseId, data);
         return NextResponse.json(result, { status: 201 });
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 400 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to update course';
+        return NextResponse.json({ message }, { status: 400 });
     }
 }

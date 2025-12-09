@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
         );
         setAuthCookie(response, result.token);
         return response;
-    } catch (error: unknown) {
+    } catch (error) {
         return NextResponse.json({ message: (error as Error).message }, { status: 400 });
     }
 }

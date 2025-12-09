@@ -42,10 +42,11 @@ export default function Proxy(req: NextRequest) {
 
         try {
             jwt.verify(token, process.env.JWT_SECRET || '');
-        } catch (err) {
+        } catch (error) {
             // if (isProtectedApiRoute) {
             //     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
             // }
+            console.error('Authentication error:', error);
             req.cookies.delete('token');
             return NextResponse.redirect(new URL('/login', req.url));
         }

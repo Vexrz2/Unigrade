@@ -34,7 +34,8 @@ export async function PATCH(request: NextRequest) {
         
         const result = await updateUser(auth.userId, data);
         return NextResponse.json({ updatedUser: result }, { status: 201 });
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 400 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to update user';
+        return NextResponse.json({ message }, { status: 400 });
     }
 }

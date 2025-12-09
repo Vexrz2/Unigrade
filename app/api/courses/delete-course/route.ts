@@ -13,7 +13,8 @@ export async function DELETE(request: NextRequest) {
         const { courseId } = await request.json();
         const result = await removeCourse(auth.userId, courseId);
         return NextResponse.json(result, { status: 200 });
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 400 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to delete course';
+        return NextResponse.json({ message }, { status: 400 });
     }
 }
