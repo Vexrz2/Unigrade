@@ -32,14 +32,16 @@ export default function GpaCalculator({ isOpen, onClose, currentCourses }: GpaCa
 
     if (validSimulated.length === 0) return currentAverage;
 
-    const allCourses: Course[] = [
-      ...currentCourses,
-      ...validSimulated.map(c => ({
+    const allCourses: Course[] = [...currentCourses];
+
+    validSimulated.forEach(c => {
+      allCourses.push({
         courseName: c.name,
-        courseGrade: Number(c.grade),
+        courseGrade: Number(c.grade), 
         courseCredit: Number(c.credit),
-      }))
-    ];
+        status: 'completed',
+      });
+    });
 
     return getWeightedAverage(allCourses);
   }, [currentCourses, simulatedCourses, currentAverage]);

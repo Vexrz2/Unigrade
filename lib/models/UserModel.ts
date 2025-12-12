@@ -1,9 +1,38 @@
 import mongoose from 'mongoose';
 
+// Grade attempt subdocument schema (for tracking retakes)
+const gradeAttemptSchema = new mongoose.Schema({
+    grade: { type: Number, required: true, min: 0, max: 100 },
+    date: { type: String }, // ISO date string
+    label: { type: String }, // e.g., "First attempt", "Retake"
+    isFinal: { type: Boolean, default: false },
+}, { _id: false });
+
+// Semester subdocument schema
+const semesterSchema = new mongoose.Schema({
+    year: { type: Number, required: true },
+    term: { type: String, enum: ['Fall', 'Spring', 'Summer'], required: true },
+}, { _id: false });
+
 const courseSchema = new mongoose.Schema({
     courseName: { type: String, required: true },
-    courseGrade: { type: Number, required: true, min: 0, max: 100 },
+    // Legacy single grade - kept for backward compatibility
+    courseGrade: { type: Number, min: 0, max: 100 },
     courseCredit: { type: Number, required: true },
+    grades: [gradeAttemptSchema], // Array of grade attempts
+    semester: semesterSchema,
+    status: { 
+        type: String, 
+        enum: ['planned', 'in-progress', 'completed'], 
+        default: 'completed',
+        required: true 
+    },
+    passed: { type: Boolean, default: null },
+    category: { 
+        type: String, 
+        enum: ['required', 'elective', 'general'],
+        default: 'elective'
+    },
 });
 
 const degreeSchema = new mongoose.Schema({

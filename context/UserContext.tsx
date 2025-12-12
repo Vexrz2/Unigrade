@@ -23,7 +23,6 @@ export default function UserContextProvider({ children }: { children: React.Reac
         setUser(res.data.user ?? null);
       } catch (err) {
         setUser(null);
-        console.error('Failed to fetch user profile:', err);
       } finally {
         setLoading(false);
       }
