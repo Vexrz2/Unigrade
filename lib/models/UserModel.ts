@@ -53,6 +53,9 @@ const userSchema = new mongoose.Schema({
     courses: [courseSchema],
     degree: degreeSchema,
     savedJobs: [savedJobSchema], // Array of saved job objects
+    onboardingCompleted: { type: Boolean, default: false },
+    startYear: { type: Number, default: () => new Date().getFullYear() },
+    expectedGraduationYear: { type: Number, default: () => new Date().getFullYear() + 4 },
 });
 
 // Delete the cached model in development to allow hot reload

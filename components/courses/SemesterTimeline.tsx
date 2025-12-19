@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useContext } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -25,6 +25,7 @@ import type { Course, Semester, SemesterTerm } from '@/types';
 import { useEditCourse } from '@/hooks/useCourses';
 import { useQueryClient } from '@tanstack/react-query';
 import { getCourseStatus, getFinalGrade, getSemesterKey } from '@/lib/CoursesUtil';
+import { UserContext } from '@/context/UserContext';
 import toast from 'react-hot-toast';
 
 interface SemesterTimelineProps {
@@ -224,11 +225,13 @@ type PendingMove = {
 export default function SemesterTimeline({ courses }: SemesterTimelineProps) {
   const editCourseMutation = useEditCourse();
   const queryClient = useQueryClient();
+  const ctx = useContext(UserContext);
+  const user = ctx?.user;
   const [activeCourse, setActiveCourse] = useState<Course | null>(null);
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
   const [gradeInput, setGradeInput] = useState<string>('');
 
-  // Determine year range from courses
+  // Determine year range from user settings or courses
   const { startYear, endYear, currentSemester } = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -238,6 +241,19 @@ export default function SemesterTimeline({ courses }: SemesterTimelineProps) {
     if (currentMonth >= 0 && currentMonth < 5) currentTerm = 'Spring';
     else if (currentMonth >= 5 && currentMonth < 8) currentTerm = 'Summer';
     
+    // Use user's configured years if available, otherwise fall back to course-based calculation
+    const userStartYear = user?.startYear;
+    const userEndYear = user?.expectedGraduationYear;
+    
+    if (userStartYear && userEndYear) {
+      return {
+        startYear: userStartYear,
+        endYear: userEndYear,
+        currentSemester: { year: currentYear, term: currentTerm },
+      };
+    }
+    
+    // Fallback: determine from courses
     const years = courses
       .filter(c => c.semester)
       .map(c => c.semester!.year);
@@ -250,7 +266,7 @@ export default function SemesterTimeline({ courses }: SemesterTimelineProps) {
       endYear: Math.max(maxYear, currentYear + 2),
       currentSemester: { year: currentYear, term: currentTerm },
     };
-  }, [courses]);
+  }, [courses, user?.startYear, user?.expectedGraduationYear]);
 
   // Generate all semesters in range
   const allSemesters = useMemo(() => getSemesterRange(startYear, endYear), [startYear, endYear]);

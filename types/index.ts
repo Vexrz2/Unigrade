@@ -42,6 +42,9 @@ export type User = {
   courses: Course[];
   degree?: Degree;
   savedJobs?: JobListing[];
+  onboardingCompleted?: boolean;
+  startYear?: number;
+  expectedGraduationYear?: number;
 };
 
 export type UserProfileData = {

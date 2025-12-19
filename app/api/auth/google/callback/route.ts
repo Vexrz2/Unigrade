@@ -53,8 +53,9 @@ export async function GET(request: NextRequest) {
             profilePicture: payload.picture,
         });
 
-        // Set authentication cookie
-        const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`);
+        // Redirect to onboarding if not completed, otherwise to dashboard
+        const redirectPath = result.user.onboardingCompleted === false ? '/onboarding' : '/dashboard';
+        const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}${redirectPath}`);
         setAuthCookie(response, result.token);
 
         return response;

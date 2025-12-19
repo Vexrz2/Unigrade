@@ -63,3 +63,263 @@ html {
     background-position: -200% 0;
   }
 }
+
+/* Onboarding Mascot Animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes float-delayed {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes wave {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes wave-hand {
+  0%, 100% {
+    transform: rotate(0deg) translateX(0);
+  }
+  25% {
+    transform: rotate(-20deg) translateX(-2px);
+  }
+  75% {
+    transform: rotate(20deg) translateX(2px);
+  }
+}
+
+@keyframes blink {
+  0%, 90%, 100% {
+    opacity: 1;
+  }
+  95% {
+    opacity: 0;
+  }
+}
+
+@keyframes thinking {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-3px) rotate(-2deg);
+  }
+  75% {
+    transform: translateY(-3px) rotate(2deg);
+  }
+}
+
+@keyframes cap-toss {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(10deg);
+  }
+}
+
+@keyframes tassel-swing {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(15deg);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes think-bubble {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Gentler animation variants */
+@keyframes wave-gentle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes wave-hand-gentle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-8deg);
+  }
+  75% {
+    transform: rotate(8deg);
+  }
+}
+
+@keyframes thinking-gentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes bounce-gentle {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.02);
+  }
+}
+
+@keyframes cap-toss-gentle {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(3deg);
+  }
+}
+
+@keyframes tassel-gentle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes think-bubble-gentle {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 4s ease-in-out infinite;
+  animation-delay: 1s;
+}
+
+.animate-wave {
+  animation: wave 1.5s ease-in-out infinite;
+}
+
+.animate-wave-gentle {
+  animation: wave-gentle 2.5s ease-in-out infinite;
+}
+
+.animate-wave-hand {
+  animation: wave-hand 0.8s ease-in-out infinite;
+}
+
+.animate-wave-hand-gentle {
+  animation: wave-hand-gentle 1.2s ease-in-out infinite;
+}
+
+.animate-blink {
+  animation: blink 4s ease-in-out infinite;
+}
+
+.animate-thinking {
+  animation: thinking 2s ease-in-out infinite;
+}
+
+.animate-thinking-gentle {
+  animation: thinking-gentle 3s ease-in-out infinite;
+}
+
+.animate-bounce-gentle {
+  animation: bounce-gentle 2s ease-in-out infinite;
+}
+
+.animate-celebration {
+  animation: celebration 0.8s ease-in-out infinite;
+}
+
+.animate-cap-toss {
+  animation: cap-toss 1s ease-in-out infinite;
+}
+
+.animate-cap-toss-gentle {
+  animation: cap-toss-gentle 1.5s ease-in-out infinite;
+}
+
+.animate-tassel-swing {
+  animation: tassel-swing 1s ease-in-out infinite;
+}
+
+.animate-tassel-gentle {
+  animation: tassel-gentle 2s ease-in-out infinite;
+}
+
+.animate-sparkle {
+  animation: sparkle 1.5s ease-in-out infinite;
+}
+
+.animate-think-bubble {
+  animation: think-bubble 2s ease-in-out infinite;
+}
+
+.animate-think-bubble-gentle {
+  animation: think-bubble-gentle 3s ease-in-out infinite;
+}
+
+.delay-100 {
+  animation-delay: 0.1s;
+}
+
+.delay-200 {
+  animation-delay: 0.2s;
+}
+
+.delay-300 {
+  animation-delay: 0.3s;
+}
+
+.delay-400 {
+  animation-delay: 0.4s;
+}

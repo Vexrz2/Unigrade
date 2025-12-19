@@ -27,6 +27,7 @@ export async function handleGoogleAuth(data: {
 
         // Create new user with Google OAuth
         const username = name.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000);
+        const currentYear = new Date().getFullYear();
         
         user = new User({
             username,
@@ -37,6 +38,9 @@ export async function handleGoogleAuth(data: {
             emailVerified: true,
             degree: { type: '', major: '', creditRequirement: 120 },
             courses: [],
+            onboardingCompleted: false,
+            startYear: currentYear,
+            expectedGraduationYear: currentYear + 4,
         });
 
         await user.save();
@@ -80,6 +84,7 @@ export async function registerUser(data: {
     // Hash the password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const currentYear = new Date().getFullYear();
 
     // Create and save the new user
     const newUser = new User({
@@ -90,6 +95,9 @@ export async function registerUser(data: {
         emailVerified: false,
         degree: { type: '', major: major, creditRequirement: 120 },
         courses: [],
+        onboardingCompleted: false,
+        startYear: currentYear,
+        expectedGraduationYear: currentYear + 4,
     });
 
     await newUser.save();

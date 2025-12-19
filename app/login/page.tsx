@@ -29,7 +29,13 @@ export default function LoginPage() {
       const res = await api.post('/auth/login', formData);
       if (setUser) setUser(res.data.user);
       toast('Welcome back!');
-      router.push('/dashboard');
+      
+      // Redirect to onboarding if not completed, otherwise to dashboard
+      if (res.data.user?.onboardingCompleted === false) {
+        router.push('/onboarding');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err: unknown) {
       const errorResponse = err as { response?: { data?: { message?: string } } };
       setFormData({ email: formData.email, password: '' });
@@ -127,7 +133,7 @@ export default function LoginPage() {
             </div>
             <div className='text-center'>
               <span className='text-gray-600 text-sm'>Don&apos;t have an account? </span>
-              <a href='/register' className='text-theme3 hover:text-theme4 font-semibold text-sm transition-colors'>Sign up here</a>
+              <a href='/onboarding' className='text-theme3 hover:text-theme4 font-semibold text-sm transition-colors'>Sign up here</a>
             </div>
           </div>
         </div>
