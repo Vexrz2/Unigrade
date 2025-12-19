@@ -20,7 +20,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { FiChevronLeft, FiChevronRight, FiMenu, FiCheckCircle, FiClock, FiTarget } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiMenu, FiCheckCircle, FiClock, FiTarget, FiX } from 'react-icons/fi';
 import type { Course, Semester, SemesterTerm } from '@/types';
 import { useEditCourse } from '@/hooks/useCourses';
 import { useQueryClient } from '@tanstack/react-query';
@@ -215,10 +215,18 @@ function SemesterColumn({
   );
 }
 
+// Type for pending move that requires a grade
+type PendingMove = {
+  course: Course;
+  newSemester: Semester | null;
+};
+
 export default function SemesterTimeline({ courses }: SemesterTimelineProps) {
   const editCourseMutation = useEditCourse();
   const queryClient = useQueryClient();
   const [activeCourse, setActiveCourse] = useState<Course | null>(null);
+  const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
+  const [gradeInput, setGradeInput] = useState<string>('');
 
   // Determine year range from courses
   const { startYear, endYear, currentSemester } = useMemo(() => {
@@ -348,6 +356,18 @@ export default function SemesterTimeline({ courses }: SemesterTimelineProps) {
     // If semester changed, update the course
     if (targetSemesterKey && targetSemesterKey !== currentSemesterKey) {
       const newSemester = parseSemesterKey(targetSemesterKey);
+      
+      // Check if moving to a completed semester (past) without a grade
+      const newStatus = getCourseStatus(newSemester || undefined);
+      const hasGrade = getFinalGrade(course) !== undefined;
+      
+      if (newStatus === 'completed' && !hasGrade) {
+        // Show grade prompt modal
+        setPendingMove({ course, newSemester });
+        setGradeInput('');
+        return;
+      }
+      
       const queryKey = ['courses', 'list'];
       
       // Optimistic update - update cache immediately
@@ -385,8 +405,127 @@ export default function SemesterTimeline({ courses }: SemesterTimelineProps) {
     }
   };
 
+  // Handle completing the move with a grade
+  const handleGradeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingMove) return;
+
+    const grade = parseFloat(gradeInput);
+    if (isNaN(grade) || grade < 0 || grade > 100) {
+      toast.error('Please enter a valid grade between 0 and 100');
+      return;
+    }
+
+    const { course, newSemester } = pendingMove;
+    const queryKey = ['courses', 'list'];
+    
+    // Optimistic update
+    const previousCourses = queryClient.getQueryData<Course[]>(queryKey);
+    
+    queryClient.setQueryData<Course[]>(queryKey, (old) => {
+      if (!old) return old;
+      return old.map(c => 
+        c._id === course._id 
+          ? { 
+              ...c, 
+              semester: newSemester || undefined,
+              grades: [{ grade, isFinal: true }]
+            }
+          : c
+      );
+    });
+    
+    queryClient.cancelQueries({ queryKey });
+    
+    editCourseMutation.mutate(
+      {
+        courseId: course._id!,
+        formData: { 
+          semester: newSemester || undefined,
+          grades: [{ grade, isFinal: true }]
+        }
+      },
+      {
+        onSuccess: () => {
+          toast.success(`Moved to ${formatSemester(newSemester)} with grade ${grade}`);
+          setPendingMove(null);
+          setGradeInput('');
+        },
+        onError: () => {
+          queryClient.setQueryData(queryKey, previousCourses);
+          toast.error('Failed to move course');
+        }
+      }
+    );
+  };
+
+  const handleCancelGradeModal = () => {
+    setPendingMove(null);
+    setGradeInput('');
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
+      {/* Grade Prompt Modal */}
+      {pendingMove && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Enter Grade</h3>
+              <button
+                onClick={handleCancelGradeModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Moving <span className="font-medium">{pendingMove.course.name}</span> to{' '}
+              <span className="font-medium">{formatSemester(pendingMove.newSemester)}</span>{' '}
+              (completed). Please enter the final grade.
+            </p>
+            
+            <form onSubmit={handleGradeSubmit}>
+              <div className="mb-4">
+                <label htmlFor="grade" className="block text-sm font-medium text-gray-700 mb-1">
+                  Final Grade (0-100)
+                </label>
+                <input
+                  type="number"
+                  id="grade"
+                  value={gradeInput}
+                  onChange={(e) => setGradeInput(e.target.value)}
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  placeholder="Enter grade..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-theme3 focus:border-transparent"
+                  autoFocus
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleCancelGradeModal}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editCourseMutation.isPending}
+                  className="flex-1 px-4 py-2 bg-theme3 text-white rounded-lg hover:bg-theme3/90 transition-colors disabled:opacity-50"
+                >
+                  {editCourseMutation.isPending ? 'Saving...' : 'Save & Move'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Semester Timeline</h2>
         <p className="text-sm text-gray-500">Drag courses to move between semesters</p>
