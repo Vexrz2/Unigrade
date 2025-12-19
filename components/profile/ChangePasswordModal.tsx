@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react';
 import { FiEye, FiEyeOff, FiX } from 'react-icons/fi';
-import { useDoubleViewPasswordToggle } from '../../hooks/useViewPasswordToggle';
+import { useViewPasswordToggle } from '../../hooks/useViewPasswordToggle';
 
 export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMessage }: { isOpen: boolean; onClose: () => void; onSubmit: (e: React.FormEvent<HTMLFormElement>) => void; errorMessage?: string }) {
   const [formData, setFormData] = useState({ currentPassword: '', newPassword: '' });
-  const { isPasswordHidden, toggleViewPassword } = useDoubleViewPasswordToggle();
+  const { isPasswordHidden, toggleViewPassword } = useViewPasswordToggle();
   if (!isOpen) return null;
 
   const { currentPassword, newPassword } = formData;
