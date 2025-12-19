@@ -1,16 +1,16 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import { getMaxImprovement, getWorstCourse } from '../../lib/CoursesUtil';
 import { PiSortAscendingThin } from 'react-icons/pi';
 import { IoIosSearch } from 'react-icons/io';
 import { TiDelete } from 'react-icons/ti';
 import { BiEdit } from 'react-icons/bi';
-import { FiCalendar, FiBookOpen, FiCheckCircle, FiClock, FiTarget } from 'react-icons/fi';
+import { FiCalendar, FiCheckCircle, FiClock, FiTarget } from 'react-icons/fi';
 import EditCourseModal from './EditCourseModal';
 import { useModal } from '../../hooks/useModal';
 import { useCourses, useDeleteCourse } from '../../hooks/useCourses';
-import type { Course, Semester } from '../../types';
+import type { UserCourse, Semester, CourseRuntimeStatus } from '../../types';
+import { getCurrentSemester, getCourseRuntimeStatus } from '../../types';
 import toast from 'react-hot-toast';
 import { CourseListSkeleton } from '../Skeleton';
 
@@ -20,8 +20,15 @@ const formatSemester = (semester?: Semester) => {
   return `${semester.term} ${semester.year}`;
 };
 
+// Helper to get the final grade from grades array
+const getFinalGrade = (course: UserCourse): number | undefined => {
+  if (!course.grades || course.grades.length === 0) return undefined;
+  const finalGrade = course.grades.find(g => g.isFinal);
+  return finalGrade?.grade ?? course.grades[course.grades.length - 1]?.grade;
+};
+
 // Helper to get status badge styles
-const getStatusBadge = (status?: string) => {
+const getStatusBadge = (status: CourseRuntimeStatus) => {
   switch (status) {
     case 'completed':
       return { bg: 'bg-green-100', text: 'text-green-700', icon: FiCheckCircle, label: 'Completed' };
@@ -30,20 +37,7 @@ const getStatusBadge = (status?: string) => {
     case 'planned':
       return { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: FiTarget, label: 'Planned' };
     default:
-      return { bg: 'bg-gray-100', text: 'text-gray-700', icon: FiBookOpen, label: 'Unknown' };
-  }
-};
-
-// Helper to get category badge styles
-const getCategoryBadge = (category?: string) => {
-  switch (category) {
-    case 'required':
-      return { bg: 'bg-red-50', text: 'text-red-600', label: 'Required' };
-    case 'general':
-      return { bg: 'bg-teal-50', text: 'text-teal-600', label: 'General Ed' };
-    case 'elective':
-    default:
-      return { bg: 'bg-gray-50', text: 'text-gray-600', label: 'Elective' };
+      return { bg: 'bg-gray-100', text: 'text-gray-700', icon: FiTarget, label: 'Unknown' };
   }
 };
 
@@ -60,46 +54,44 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
   const [selectValue, setSelectValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<UserCourse | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'semester'>('list');
   const editCourseModal = useModal();
   
-  // Only calculate worst course from completed courses with grades
-  const completedCourses = useMemo(() => 
-    courses.filter((c: Course) => c.status === 'completed' && c.courseGrade !== undefined), 
-    [courses]
-  );
-  const worstCourse = useMemo(() => getWorstCourse(completedCourses), [completedCourses]);
-  const maxImprovement = useMemo(() => getMaxImprovement(completedCourses), [completedCourses]);
+  const currentSemester = useMemo(() => getCurrentSemester(), []);
 
   // Derive filtered and sorted course list
-  const courseList = useMemo<Course[]>(() => {
-    let filtered: Course[] = (courses ?? []).filter((course: Course) => course._id);
+  const courseList = useMemo<UserCourse[]>(() => {
+    let filtered: UserCourse[] = (courses ?? []).filter((course: UserCourse) => course._id);
     
     // Apply search filter
     if (searchQuery) {
-      filtered = filtered.filter((course) => 
-        course.courseName && course.courseName.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter((c) => 
+        (c.course?.name && c.course.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (c.course?.code && c.course.code.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
     
     // Apply status filter
     if (statusFilter) {
-      filtered = filtered.filter((course) => course.status === statusFilter);
+      filtered = filtered.filter((course) => {
+        const status = getCourseRuntimeStatus(course, currentSemester);
+        return status === statusFilter;
+      });
     }
     
     // Apply sort
     switch (selectValue) {
       case "gradeDesc":
-        return [...filtered].sort((a, b) => (b.courseGrade ?? 0) - (a.courseGrade ?? 0));
+        return [...filtered].sort((a, b) => (getFinalGrade(b) ?? 0) - (getFinalGrade(a) ?? 0));
       case "gradeAsc":
-        return [...filtered].sort((a, b) => (a.courseGrade ?? 0) - (b.courseGrade ?? 0));
+        return [...filtered].sort((a, b) => (getFinalGrade(a) ?? 0) - (getFinalGrade(b) ?? 0));
       case "creditDesc":
-        return [...filtered].sort((a, b) => (b.courseCredit ?? 0) - (a.courseCredit ?? 0));
+        return [...filtered].sort((a, b) => (b.course?.credits ?? 0) - (a.course?.credits ?? 0));
       case "creditAsc":
-        return [...filtered].sort((a, b) => (a.courseCredit ?? 0) - (b.courseCredit ?? 0));
+        return [...filtered].sort((a, b) => (a.course?.credits ?? 0) - (b.course?.credits ?? 0));
       case "alphabetical":
-        return [...filtered].sort((a, b) => (a.courseName ?? '').localeCompare(b.courseName ?? ''));
+        return [...filtered].sort((a, b) => (a.course?.name ?? '').localeCompare(b.course?.name ?? ''));
       case "semesterDesc":
         return [...filtered].sort((a, b) => semesterSortValue(b.semester) - semesterSortValue(a.semester));
       case "semesterAsc":
@@ -107,11 +99,11 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
       default:
         return filtered;
     }
-  }, [courses, searchQuery, statusFilter, selectValue]);
+  }, [courses, searchQuery, statusFilter, selectValue, currentSemester]);
 
   // Group courses by semester for semester view
   const coursesBySemester = useMemo(() => {
-    const grouped = new Map<string, Course[]>();
+    const grouped = new Map<string, UserCourse[]>();
     courseList.forEach(course => {
       const key = course.semester 
         ? `${course.semester.year}-${course.semester.term}` 
@@ -149,21 +141,22 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
     setStatusFilter(e.target.value);
   };
 
-  const handleEdit = (course: Course) => {
+  const handleEdit = (course: UserCourse) => {
     setSelectedCourse(course);
     editCourseModal.openModal();
   };
 
-  const renderCourseCard = (course: Course) => {
-    const statusBadge = getStatusBadge(course.status);
-    const categoryBadge = getCategoryBadge(course.category);
+  const renderCourseCard = (course: UserCourse) => {
+    const status = getCourseRuntimeStatus(course, currentSemester);
+    const statusBadge = getStatusBadge(status);
     const StatusIcon = statusBadge.icon;
+    const grade = getFinalGrade(course);
 
     return (
       <div key={course._id} id={course._id} className='bg-gray-50 hover:bg-gray-100 m-2 border border-gray-200 rounded-lg shadow-sm p-4 flex items-center justify-between transition-colors'>
         <div className='course-details flex flex-col flex-1'>
           <div className="flex items-center gap-2 mb-2">
-            <h3 className='font-bold text-xl text-gray-800'>{course.courseName}</h3>
+            <h3 className='font-bold text-xl text-gray-800'>{course.course?.code} - {course.course?.name}</h3>
           </div>
           
           {/* Badges row */}
@@ -171,9 +164,6 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}>
               <StatusIcon size={12} />
               {statusBadge.label}
-            </span>
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${categoryBadge.bg} ${categoryBadge.text}`}>
-              {categoryBadge.label}
             </span>
             {course.semester && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-600">
@@ -185,24 +175,16 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
           
           {/* Course details */}
           <div className='flex flex-wrap gap-4 text-gray-600'>
-            {course.status === 'completed' && course.courseGrade !== undefined && (
-              <p className='text-md font-medium'>Grade: <span className='font-semibold text-gray-800'>{course.courseGrade}</span></p>
+            {grade !== undefined && (
+              <p className='text-md font-medium'>Grade: <span className='font-semibold text-gray-800'>{grade}</span></p>
             )}
-            <p className='text-md font-medium'>Credits: <span className='font-semibold text-gray-800'>{course.courseCredit}</span></p>
+            <p className='text-md font-medium'>Credits: <span className='font-semibold text-gray-800'>{course.course?.credits}</span></p>
             {course.grades && course.grades.length > 1 && (
               <p className='text-md font-medium text-blue-600'>
                 {course.grades.length} attempts
               </p>
             )}
           </div>
-          
-          {worstCourse._id === course._id && maxImprovement > 0 && course.status === 'completed' && (
-            <div className='mt-2 bg-red-50 border-l-4 border-red-500 p-2 rounded'>
-              <span className='text-sm text-red-700'>
-                Your worst course: lowers average by <span className='font-bold'>{maxImprovement.toFixed(2)}</span> points.
-              </span>
-            </div>
-          )}
         </div>
         <div className='course-actions flex flex-col gap-2 ml-4'>
           <button 

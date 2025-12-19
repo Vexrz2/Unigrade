@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
-import type { Course } from '../types';
+import type { UserCourse } from '../types';
 
 // Query key factory
 export const courseKeys = {
@@ -15,7 +15,7 @@ export const useCourses = () => {
     queryKey: courseKeys.list(),
     queryFn: async () => {
       const res = await api.get('/courses/course-list');
-      return res.data as Course[];
+      return res.data as UserCourse[];
     },
   });
 };
@@ -25,7 +25,7 @@ export const useAddCourse = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (formData: Partial<Course>) => {
+    mutationFn: async (formData: Partial<UserCourse>) => {
       const res = await api.post('/courses/add-course', formData);
       return res.data;
     },
@@ -40,7 +40,7 @@ export const useEditCourse = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ courseId, formData }: { courseId: string; formData: Partial<Course> }) => {
+    mutationFn: async ({ courseId, formData }: { courseId: string; formData: Partial<UserCourse> }) => {
       const res = await api.patch(`/courses/update-course/${courseId}`, formData);
       return res.data;
     },

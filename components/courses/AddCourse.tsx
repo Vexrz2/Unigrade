@@ -1,88 +1,138 @@
 "use client";
 
-import React, { useState } from 'react';
-import type { CourseFormData, CourseStatus, CourseCategory, SemesterTerm, Course } from '@/types';
+import React, { useState, useEffect, useCallback, useRef, useContext, useMemo } from 'react';
+import type { SemesterTerm, Course } from '@/types';
 import { useAddCourse } from '@/hooks/useCourses';
+import { UserContext } from '@/context/UserContext';
 import toast from 'react-hot-toast';
+import api from '@/lib/api';
+import { FiPlus, FiSearch, FiX } from 'react-icons/fi';
 
 const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 5 + i);
 const TERM_OPTIONS: SemesterTerm[] = ['Fall', 'Spring', 'Summer'];
-const STATUS_OPTIONS: { value: CourseStatus; label: string }[] = [
-  { value: 'planned', label: 'Planned' },
-  { value: 'in-progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
-];
-const CATEGORY_OPTIONS: { value: CourseCategory; label: string }[] = [
-  { value: 'required', label: 'Required' },
-  { value: 'elective', label: 'Elective' },
-  { value: 'general', label: 'General Education' },
-];
 
 export default function AddCourse() {
-  const [formData, setFormData] = useState<CourseFormData>({ 
-    courseName: '', 
-    courseGrade: '', 
-    courseCredit: '',
-    status: 'completed',
-    category: 'elective',
-    semester: { year: CURRENT_YEAR, term: 'Fall' },
+  const ctx = useContext(UserContext);
+  const user = ctx?.user;
+
+  // Generate year options based on user's degree timeline
+  const YEAR_OPTIONS = useMemo(() => {
+    const startYear = user?.startYear || CURRENT_YEAR - 5;
+    const endYear = user?.expectedGraduationYear || CURRENT_YEAR + 5;
+    const years: number[] = [];
+    for (let year = startYear; year <= Math.max(endYear, CURRENT_YEAR + 2); year++) {
+      years.push(year);
+    }
+    return years;
+  }, [user?.startYear, user?.expectedGraduationYear]);
+
+  // Selected course from database
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [semester, setSemester] = useState<{ year: number; term: SemesterTerm }>({ 
+    year: CURRENT_YEAR, 
+    term: 'Fall' 
   });
-  const [errors, setErrors] = useState<{ courseName?: string; courseGrade?: string; courseCredit?: string; general?: string }>({});
+  const [grade, setGrade] = useState<string>('');
+  const [errors, setErrors] = useState<{ course?: string; grade?: string; general?: string }>({});
   const addCourseMutation = useAddCourse();
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    
-    if (name === 'semesterYear') {
-      setFormData({ 
-        ...formData, 
-        semester: { ...formData.semester!, year: Number(value) } 
-      });
-    } else if (name === 'semesterTerm') {
-      setFormData({ 
-        ...formData, 
-        semester: { ...formData.semester!, term: value as SemesterTerm } 
-      });
-    } else if (name === 'courseName') {
-      setFormData({ ...formData, [name]: value });
-    } else if (name === 'status' || name === 'category') {
-      setFormData({ ...formData, [name]: value });
-    } else {
-      // For number fields, preserve empty string, otherwise convert to number
-      const processedValue = value === '' ? '' : Number(value);
-      setFormData({ ...formData, [name]: processedValue });
+  // Course search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Course[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customCourseData, setCustomCourseData] = useState({ name: '', code: '', credits: 3 });
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Search courses from database - filter by user's degree field
+  const searchCourses = useCallback(async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setSearchResults([]);
+      return;
     }
     
-    // Clear error for this field when user starts typing
-    if (errors[name as keyof typeof errors]) {
-      setErrors({ ...errors, [name]: undefined });
+    setIsSearching(true);
+    try {
+      const res = await api.get('/course-database/search', {
+        params: { query, department: user?.degree?.major || undefined, limit: 5 }
+      });
+      setSearchResults(res.data.courses || []);
+    } catch (error) {
+      console.error('Failed to search courses:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [user?.degree?.major]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery && !selectedCourse) {
+        searchCourses(searchQuery);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchCourses, selectedCourse]);
+
+  // Handle click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectCourseFromDatabase = async (course: Course) => {
+    setSelectedCourse(course);
+    setSearchQuery('');
+    setShowSuggestions(false);
+    setSearchResults([]);
+    setErrors({});
+    
+    // Track usage
+    if (course._id) {
+      try {
+        await api.post('/course-database/track-usage', { courseId: course._id });
+      } catch (error) {
+        console.error('Failed to track course usage:', error);
+      }
     }
   };
+
+  const clearSelection = () => {
+    setSelectedCourse(null);
+    setSearchQuery('');
+    setShowCustomForm(false);
+    setCustomCourseData({ name: '', code: '', credits: 3 });
+  };
+
+  // Custom course is valid when using custom form and has required fields (code is required, name comes from searchQuery)
+  const isCustomCourseValid = showCustomForm && searchQuery.trim() && customCourseData.code.trim() && customCourseData.credits > 0;
 
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
 
-    if (!formData.courseName.trim()) {
-      newErrors.courseName = 'Course name is required';
+    // Must either select a course OR have valid custom course data
+    if (!selectedCourse && !isCustomCourseValid) {
+      newErrors.course = 'Please select a course or create a custom one';
     }
 
-    // Grade is only required for completed courses
-    if (formData.status === 'completed') {
-      const gradeValue = formData.courseGrade;
-      if (gradeValue === null || gradeValue === undefined || gradeValue === '') {
-        newErrors.courseGrade = 'Grade is required for completed courses';
-      } else {
-        const grade = Number(gradeValue);
-        if (isNaN(grade) || grade < 0 || grade > 100) {
-          newErrors.courseGrade = 'Grade must be between 0 and 100';
-        }
+    // Grade is optional - if provided, validate it
+    if (grade !== '') {
+      const gradeNum = Number(grade);
+      if (isNaN(gradeNum) || gradeNum < 0 || gradeNum > 100) {
+        newErrors.grade = 'Grade must be between 0 and 100';
       }
-    }
-
-    const credit = Number(formData.courseCredit);
-    if (isNaN(credit) || credit <= 0) {
-      newErrors.courseCredit = 'Course credit must be greater than 0';
     }
 
     setErrors(newErrors);
@@ -97,33 +147,40 @@ export default function AddCourse() {
       return;
     }
 
-    const courseData: Partial<Course> = {
-      courseName: formData.courseName,
-      courseCredit: formData.courseCredit as number,
-      status: formData.status,
-      category: formData.category,
-      semester: formData.semester,
+    // Build course data - either with courseId or customCourse
+    const courseData: {
+      courseId?: string;
+      customCourse?: { name: string; code?: string; credits: number };
+      semester: { year: number; term: SemesterTerm };
+      grades?: { grade: number; isFinal: boolean; label: string }[];
+    } = {
+      semester,
+      grades: grade !== '' ? [{ grade: Number(grade), isFinal: true, label: 'Final' }] : undefined,
     };
 
-    // Only include grade for completed courses
-    if (formData.status === 'completed' && formData.courseGrade !== '') {
-      courseData.courseGrade = formData.courseGrade as number;
+    if (selectedCourse?._id) {
+      courseData.courseId = selectedCourse._id;
+    } else if (isCustomCourseValid) {
+      courseData.customCourse = {
+        name: searchQuery.trim(),
+        code: customCourseData.code,
+        credits: customCourseData.credits,
+      };
     }
 
     addCourseMutation.mutate(
       courseData,
       {
         onSuccess: () => {
-          setFormData({ 
-            courseName: '', 
-            courseGrade: '', 
-            courseCredit: '',
-            status: 'completed',
-            category: 'elective',
-            semester: { year: CURRENT_YEAR, term: 'Fall' },
-          });
+          setSelectedCourse(null);
+          setSearchQuery('');
+          setSemester({ year: CURRENT_YEAR, term: 'Fall' });
+          setGrade('');
           setErrors({});
-          toast.success('Course added successfully!');
+          setSearchResults([]);
+          setShowCustomForm(false);
+          setCustomCourseData({ name: '', code: '', credits: 3 });
+          toast.success(selectedCourse ? 'Course added successfully!' : 'Custom course created and added!');
         },
         onError: (err: unknown) => {
           const errorResponse = err as { response?: { data?: { message?: string } } };
@@ -145,22 +202,120 @@ export default function AddCourse() {
           </div>
         )}
 
-        <div className="form-group mb-6">
-          <label className='block text-gray-800 text-sm font-semibold mb-3'>Course Name</label>
-          <input 
-            type="text" 
-            name="courseName" 
-            value={formData.courseName} 
-            onChange={onChange} 
-            placeholder="e.g., Introduction to Computer Science"
-            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
-              errors.courseName 
-                ? 'border-red-500 focus:border-red-500' 
-                : 'border-gray-200 focus:border-theme3'
-            }`}
-          />
-          {errors.courseName && (
-            <p className='text-red-600 text-xs mt-1'>{errors.courseName}</p>
+        {/* Course Selection */}
+        <div className="form-group mb-6 relative">
+          <label className='block text-gray-800 text-sm font-semibold mb-3'>Course</label>
+          <div className="relative">
+            {selectedCourse ? (
+              <div className="flex items-center gap-2 w-full px-4 py-3 border-2 border-green-300 bg-green-50 rounded-lg text-gray-700">
+                <div className="flex-1">
+                  <p className="font-medium">{selectedCourse.code} - {selectedCourse.name}</p>
+                  <p className="text-xs text-gray-500">{selectedCourse.credits} credits{selectedCourse.department ? ` • ${selectedCourse.department}` : ''}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  className="text-gray-500 hover:text-red-500 transition-colors"
+                >
+                  <FiX size={18} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input 
+                  ref={inputRef}
+                  type="text" 
+                  value={searchQuery} 
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setShowSuggestions(true)}
+                  placeholder="Search for a course..."
+                  autoComplete="off"
+                  className={`w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
+                    errors.course 
+                      ? 'border-red-500 focus:border-red-500' 
+                      : 'border-gray-200 focus:border-theme3'
+                  }`}
+                />
+                {isSearching && (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-theme3"></div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          
+          {/* Autocomplete Suggestions */}
+          {showSuggestions && searchResults.length > 0 && !selectedCourse && (
+            <div 
+              ref={suggestionsRef}
+              className="absolute z-10 w-full mt-1 bg-white border-2 border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+            >
+              {searchResults.map((course) => (
+                <button
+                  key={course._id}
+                  type="button"
+                  onClick={() => selectCourseFromDatabase(course)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 border-b last:border-b-0 transition-colors text-left"
+                >
+                  <div>
+                    <p className="font-medium text-gray-800">{course.code} - {course.name}</p>
+                    <p className="text-gray-500 text-xs">{course.credits} credits{course.department ? ` • ${course.department}` : ''}</p>
+                  </div>
+                  <FiPlus className="text-theme3" size={16} />
+                </button>
+              ))}
+            </div>
+          )}
+          
+          {/* Custom Course Link */}
+          {searchQuery && !selectedCourse && searchResults.length === 0 && !isSearching && (
+            <div className="mt-2">
+              {!showCustomForm ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomCourseData({ ...customCourseData, name: searchQuery });
+                    setShowCustomForm(true);
+                  }}
+                  className="text-xs text-theme3 hover:text-blue-600 transition-colors"
+                >
+                  Course not found? Add a custom course →
+                </button>
+              ) : (
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-gray-700">Add: <span className="font-semibold">{searchQuery}</span></p>
+                    <span className="text-xs text-orange-600 bg-orange-100 px-2 py-0.5 rounded">Pending approval</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customCourseData.code}
+                      onChange={(e) => setCustomCourseData({ ...customCourseData, code: e.target.value })}
+                      placeholder="Course code *"
+                      className="flex-1 px-3 py-2 border rounded text-sm text-gray-700"
+                    />
+                    <input
+                      type="number"
+                      value={customCourseData.credits}
+                      onChange={(e) => setCustomCourseData({ ...customCourseData, credits: Number(e.target.value) })}
+                      placeholder="Credits"
+                      min={1}
+                      className="w-20 px-3 py-2 border rounded text-sm text-gray-700"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Course will be added to your schedule and submitted for review.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {errors.course && (
+            <p className='text-red-600 text-xs mt-1'>{errors.course}</p>
           )}
         </div>
 
@@ -169,9 +324,8 @@ export default function AddCourse() {
           <label className='block text-gray-800 text-sm font-semibold mb-3'>Semester</label>
           <div className="flex gap-3">
             <select
-              name="semesterTerm"
-              value={formData.semester?.term || 'Fall'}
-              onChange={onChange}
+              value={semester.term}
+              onChange={(e) => setSemester({ ...semester, term: e.target.value as SemesterTerm })}
               className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors text-gray-700"
             >
               {TERM_OPTIONS.map(term => (
@@ -179,9 +333,8 @@ export default function AddCourse() {
               ))}
             </select>
             <select
-              name="semesterYear"
-              value={formData.semester?.year || CURRENT_YEAR}
-              onChange={onChange}
+              value={semester.year}
+              onChange={(e) => setSemester({ ...semester, year: Number(e.target.value) })}
               className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors text-gray-700"
             >
               {YEAR_OPTIONS.map(year => (
@@ -191,87 +344,33 @@ export default function AddCourse() {
           </div>
         </div>
 
-        {/* Status and Category Row */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="form-group">
-            <label className='block text-gray-800 text-sm font-semibold mb-3'>Status</label>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={onChange}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors text-gray-700"
-            >
-              {STATUS_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className='block text-gray-800 text-sm font-semibold mb-3'>Category</label>
-            <select
-              name="category"
-              value={formData.category || 'elective'}
-              onChange={onChange}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors text-gray-700"
-            >
-              {CATEGORY_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Grade - only show for completed courses */}
-        {formData.status === 'completed' && (
-          <div className="form-group mb-6">
-            <label className='block text-gray-800 text-sm font-semibold mb-3'>Grade</label>
-            <input 
-              type="number" 
-              name="courseGrade" 
-              value={formData.courseGrade === '' ? '' : (formData.courseGrade ?? '')} 
-              onChange={onChange} 
-              min={0} 
-              max={100} 
-              placeholder="0-100"
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
-                errors.courseGrade 
-                  ? 'border-red-500 focus:border-red-500' 
-                  : 'border-gray-200 focus:border-theme3'
-              }`}
-            />
-            {errors.courseGrade && (
-              <p className='text-red-600 text-xs mt-1'>{errors.courseGrade}</p>
-            )}
-          </div>
-        )}
-
+        {/* Grade (optional) */}
         <div className="form-group mb-6">
-          <label className='block text-gray-800 text-sm font-semibold mb-3'>Course Credit</label>
+          <label className='block text-gray-800 text-sm font-semibold mb-3'>Grade (optional)</label>
           <input 
             type="number" 
-            name="courseCredit" 
-            value={formData.courseCredit === '' ? '' : (formData.courseCredit ?? '')} 
-            onChange={onChange} 
+            value={grade} 
+            onChange={(e) => setGrade(e.target.value)}
             min={0} 
-            step="0.5"
-            placeholder="Credit hours"
+            max={100} 
+            placeholder="0-100"
             className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
-              errors.courseCredit 
+              errors.grade 
                 ? 'border-red-500 focus:border-red-500' 
                 : 'border-gray-200 focus:border-theme3'
             }`}
           />
-          {errors.courseCredit && (
-            <p className='text-red-600 text-xs mt-1'>{errors.courseCredit}</p>
+          {errors.grade && (
+            <p className='text-red-600 text-xs mt-1'>{errors.grade}</p>
           )}
         </div>
 
         <button 
           type="submit" 
-          disabled={addCourseMutation.isPending}
+          disabled={addCourseMutation.isPending || (!selectedCourse && !isCustomCourseValid)}
           className='w-full bg-theme3 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
         >
-          {addCourseMutation.isPending ? 'Adding...' : 'Add Course'}
+          {addCourseMutation.isPending ? 'Adding...' : (isCustomCourseValid ? 'Create & Add Course' : 'Add Course')}
         </button>
       </form>
     </div>

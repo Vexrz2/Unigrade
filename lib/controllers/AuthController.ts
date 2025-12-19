@@ -37,6 +37,8 @@ export async function handleGoogleAuth(data: {
             emailVerified: true,
             degree: { type: '', major: '', creditRequirement: 120 },
             courses: [],
+            onboardingCompleted: false,
+            isAdmin: false,
         });
 
         await user.save();
@@ -90,6 +92,8 @@ export async function registerUser(data: {
         emailVerified: false,
         degree: { type: '', major: major, creditRequirement: 120 },
         courses: [],
+        onboardingCompleted: false,
+        isAdmin: false,
     });
 
     await newUser.save();

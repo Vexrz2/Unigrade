@@ -29,7 +29,9 @@ export default function LoginPage() {
       const res = await api.post('/auth/login', formData);
       if (setUser) setUser(res.data.user);
       toast('Welcome back!');
-      router.push('/dashboard');
+      // Redirect to onboarding if not completed, otherwise dashboard
+      const redirectPath = res.data.user?.onboardingCompleted === false ? '/onboarding' : '/dashboard';
+      router.push(redirectPath);
     } catch (err: unknown) {
       const errorResponse = err as { response?: { data?: { message?: string } } };
       setFormData({ email: formData.email, password: '' });

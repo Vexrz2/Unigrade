@@ -30,7 +30,8 @@ export default function RegisterPage() {
       const res = await api.post('/auth/register', formData);
       if (setUser) setUser(res.data.user);
       toast.success('Account created successfully!');
-      router.push('/');
+      // Redirect to onboarding for new users
+      router.push('/onboarding');
     } catch (err: unknown) {
       const errorResponse = err as { response?: { data?: { message?: string } } };
       toast.error(errorResponse?.response?.data?.message ?? 'Registration failed');

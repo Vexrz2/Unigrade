@@ -22,6 +22,23 @@ export async function authMiddleware(request: NextRequest) {
     }
 }
 
+// Helper function to verify auth and return userId
+export async function verifyAuth(request: NextRequest): Promise<string | null> {
+    const result = await authMiddleware(request);
+    return result?.userId || null;
+}
+
+// Middleware to check admin status
+export async function verifyAdmin(request: NextRequest): Promise<string | null> {
+    const userId = await verifyAuth(request);
+    if (!userId) return null;
+    
+    const user = await User.findById(userId);
+    if (!user || !user.isAdmin) return null;
+    
+    return userId;
+}
+
 export function setAuthCookie(response: NextResponse, token: string) {
     response.cookies.set('token', token, {
         httpOnly: true,

@@ -44,6 +44,9 @@ export default function Navbar() {
             <li><Link href="/courses" className={getNavLinkClass('/courses')}>Courses</Link></li>
             <li><Link href="/study-plan" className={getNavLinkClass('/study-plan')}>Study Plan</Link></li>
             <li><Link href="/career-plan" className={getNavLinkClass('/career-plan')}>Career Planner</Link></li>
+            {user.isAdmin && (
+              <li><Link href="/admin/courses" className={getNavLinkClass('/admin/courses')}>Admin</Link></li>
+            )}
             <li className="ml-auto"><Link href="/profile" className={getNavLinkClass('/profile')}>Profile</Link></li>
           </ul>
 
@@ -65,6 +68,9 @@ export default function Navbar() {
               <li><Link href="/courses" onClick={closeMobileMenu} className={getNavLinkClass('/courses') + ' block'}>Courses</Link></li>
               <li><Link href="/study-plan" onClick={closeMobileMenu} className={getNavLinkClass('/study-plan') + ' block'}>Study Plan</Link></li>
               <li><Link href="/career-plan" onClick={closeMobileMenu} className={getNavLinkClass('/career-plan') + ' block'}>Career Planner</Link></li>
+              {user.isAdmin && (
+                <li><Link href="/admin/courses" onClick={closeMobileMenu} className={getNavLinkClass('/admin/courses') + ' block'}>Admin</Link></li>
+              )}
               <li className="border-t border-theme3 pt-2 mt-2"><Link href="/profile" onClick={closeMobileMenu} className={getNavLinkClass('/profile') + ' block'}>Profile</Link></li>
             </ul>
           </div>

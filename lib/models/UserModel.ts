@@ -14,25 +14,11 @@ const semesterSchema = new mongoose.Schema({
     term: { type: String, enum: ['Fall', 'Spring', 'Summer'], required: true },
 }, { _id: false });
 
-const courseSchema = new mongoose.Schema({
-    courseName: { type: String, required: true },
-    // Legacy single grade - kept for backward compatibility
-    courseGrade: { type: Number, min: 0, max: 100 },
-    courseCredit: { type: Number, required: true },
-    grades: [gradeAttemptSchema], // Array of grade attempts
-    semester: semesterSchema,
-    status: { 
-        type: String, 
-        enum: ['planned', 'in-progress', 'completed'], 
-        default: 'completed',
-        required: true 
-    },
-    passed: { type: Boolean, default: null },
-    category: { 
-        type: String, 
-        enum: ['required', 'elective', 'general'],
-        default: 'elective'
-    },
+// User course schema - references course database with user-specific data
+const userCourseSchema = new mongoose.Schema({
+    course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true }, // Reference to Course database
+    semester: { type: semesterSchema, required: true }, // When taking it
+    grades: [gradeAttemptSchema], // User's grades for this course
 });
 
 const degreeSchema = new mongoose.Schema({
@@ -64,9 +50,15 @@ const userSchema = new mongoose.Schema({
     googleId: { type: String, unique: true, sparse: true }, // Unique Google ID for OAuth users
     profilePicture: { type: String }, // Profile picture URL from OAuth provider
     emailVerified: { type: Boolean, default: false }, // OAuth users are pre-verified
-    courses: [courseSchema],
+    courses: [userCourseSchema],
     degree: degreeSchema,
     savedJobs: [savedJobSchema], // Array of saved job objects
+    // Onboarding fields
+    startYear: { type: Number }, // Year the user started their degree
+    expectedGraduationYear: { type: Number }, // Year the user expects to graduate
+    currentYear: { type: Number }, // Current academic year (1, 2, 3, 4, etc.)
+    onboardingCompleted: { type: Boolean, default: false },
+    isAdmin: { type: Boolean, default: false }, // Admin users can approve course suggestions
 });
 
 // Delete the cached model in development to allow hot reload

@@ -1,27 +1,27 @@
 import { User } from '@/lib/models/UserModel';
-import type { Course, CourseStatus, CourseCategory, Semester, GradeAttempt } from '@/types';
+import { submitCourseSuggestion } from '@/lib/controllers/CourseDatabaseController';
+import type { Semester, GradeAttempt } from '@/types';
+
+interface CustomCourseData {
+    name: string;
+    code?: string;
+    credits: number;
+    department?: string;
+}
 
 interface AddCourseData {
-    courseName: string;
-    courseCredit: number;
-    courseGrade?: number;
+    courseId?: string;           // Reference to existing Course in database
+    customCourse?: CustomCourseData;  // Or create a new custom course (pending)
+    semester: Semester;          // When taking the course
     grades?: GradeAttempt[];
-    semester?: Semester;
-    status?: CourseStatus;
-    passed?: boolean | null;
-    category?: CourseCategory;
 }
 
 export async function addCourse(userId: string, data: AddCourseData) {
     const { 
-        courseName, 
-        courseGrade, 
-        courseCredit, 
+        courseId,
+        customCourse,
         grades,
         semester,
-        status = 'completed',
-        passed,
-        category = 'elective',
     } = data;
     
     const user = await User.findById(userId);
@@ -29,97 +29,78 @@ export async function addCourse(userId: string, data: AddCourseData) {
         throw new Error('User not found');
     }
 
-    if (!courseName || typeof courseName !== 'string' || courseName.trim().length === 0) {
-        throw new Error('Invalid course name');
+    // Must provide either courseId or customCourse data
+    if (!courseId && !customCourse) {
+        throw new Error('Either courseId or custom course data is required');
     }
-
-    if (isNaN(courseCredit) || courseCredit <= 0) {
-        throw new Error('Invalid course credit');
-    }
-
-    // Validate grade only for completed courses
-    if (status === 'completed') {
-        // Check if we have grades array or legacy courseGrade
-        const hasGrades = grades && grades.length > 0;
-        const hasLegacyGrade = courseGrade !== undefined && courseGrade !== null;
-        
-        if (!hasGrades && !hasLegacyGrade) {
-            throw new Error('Completed courses must have a grade');
+    
+    // Determine the final course ID to use
+    let finalCourseId = courseId;
+    
+    // If custom course data is provided, create a pending course first
+    if (!courseId && customCourse) {
+        if (!customCourse.name?.trim()) {
+            throw new Error('Custom course name is required');
+        }
+        if (!customCourse.credits || customCourse.credits <= 0) {
+            throw new Error('Custom course credits must be greater than 0');
         }
         
-        if (hasLegacyGrade && (isNaN(courseGrade) || courseGrade < 0 || courseGrade > 100)) {
-            throw new Error('Invalid course grade');
-        }
+        // Create a pending course using the existing suggestion logic
+        const pendingCourse = await submitCourseSuggestion(userId, {
+            name: customCourse.name,
+            code: customCourse.code,
+            credits: customCourse.credits,
+            department: customCourse.department,
+        });
         
-        if (hasGrades) {
-            for (const attempt of grades) {
-                if (isNaN(attempt.grade) || attempt.grade < 0 || attempt.grade > 100) {
-                    throw new Error('Invalid grade attempt value');
-                }
+        finalCourseId = pendingCourse._id.toString();
+    }
+    
+    if (!finalCourseId) {
+        throw new Error('Failed to determine course ID');
+    }
+
+    // Validate semester
+    if (!semester || !semester.year || !semester.term) {
+        throw new Error('Semester is required');
+    }
+    if (!['Fall', 'Spring', 'Summer'].includes(semester.term)) {
+        throw new Error('Invalid semester term');
+    }
+
+    // Validate grades if provided
+    if (grades && grades.length > 0) {
+        for (const attempt of grades) {
+            if (isNaN(attempt.grade) || attempt.grade < 0 || attempt.grade > 100) {
+                throw new Error('Invalid grade attempt value');
             }
         }
     }
 
-    // Validate semester if provided
-    if (semester) {
-        if (!semester.year || !semester.term) {
-            throw new Error('Invalid semester format');
-        }
-        if (!['Fall', 'Spring', 'Summer'].includes(semester.term)) {
-            throw new Error('Invalid semester term');
-        }
-    }
-
-    // Validate status
-    if (!['planned', 'in-progress', 'completed'].includes(status)) {
-        throw new Error('Invalid course status');
-    }
-
-    // Validate category if provided
-    if (category && !['required', 'elective', 'general'].includes(category)) {
-        throw new Error('Invalid course category');
-    }
-
-    const newCourse: Partial<Course> = {
-        courseName,
-        courseCredit,
-        status,
-        category,
+    const newCourse = {
+        course: finalCourseId,
+        semester,
+        grades: grades || [],
     };
-
-    // Add grade data
-    if (grades && grades.length > 0) {
-        newCourse.grades = grades;
-        // Set courseGrade to the final grade for backward compatibility
-        const finalGrade = grades.find(g => g.isFinal) || grades[grades.length - 1];
-        newCourse.courseGrade = finalGrade.grade;
-    } else if (courseGrade !== undefined) {
-        newCourse.courseGrade = courseGrade;
-        newCourse.grades = [{ grade: courseGrade, isFinal: true, label: 'Final' }];
-    }
-
-    if (semester) {
-        newCourse.semester = semester;
-    }
-
-    if (passed !== undefined) {
-        newCourse.passed = passed;
-    }
 
     user.courses.push(newCourse);
     await user.save();
-    return newCourse;
+    
+    // Populate the course reference and return
+    await user.populate('courses.course');
+    return user.courses[user.courses.length - 1];
 }
 
 export async function getCourses(userId: string) {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).populate('courses.course');
     if (!user) {
         throw new Error('User not found');
     }
     return user.courses;
 }
 
-export async function updateCourse(userId: string, courseId: string, updatedCourseData: Partial<Course>) {
+export async function updateCourse(userId: string, courseId: string, updatedCourseData: Partial<{ course: string; semester: { year: number; term: string }; grades: GradeAttempt[] }>) {
     const user = await User.findById(userId);
     if (!user) {
         throw new Error('User not found');
@@ -132,6 +113,9 @@ export async function updateCourse(userId: string, courseId: string, updatedCour
 
     Object.assign(course, updatedCourseData);
     await user.save();
+    
+    // Return populated user
+    await user.populate('courses.course');
     return user;
 }
 

@@ -3,7 +3,8 @@
 import React, { useState, useMemo } from 'react';
 import { FiX, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { getWeightedAverage } from '@/lib/CoursesUtil';
-import type { Course } from '@/types';
+import type { UserCourse, Course } from '@/types';
+import { getCurrentSemester } from '@/types';
 
 type SimulatedCourse = {
   id: string;
@@ -15,7 +16,7 @@ type SimulatedCourse = {
 type GpaCalculatorProps = {
   isOpen: boolean;
   onClose: () => void;
-  currentCourses: Course[];
+  currentCourses: UserCourse[];
 };
 
 export default function GpaCalculator({ isOpen, onClose, currentCourses }: GpaCalculatorProps) {
@@ -24,6 +25,7 @@ export default function GpaCalculator({ isOpen, onClose, currentCourses }: GpaCa
   ]);
 
   const currentAverage = useMemo(() => getWeightedAverage(currentCourses), [currentCourses]);
+  const currentSemester = useMemo(() => getCurrentSemester(), []);
 
   const projectedAverage = useMemo(() => {
     const validSimulated = simulatedCourses.filter(
@@ -32,19 +34,29 @@ export default function GpaCalculator({ isOpen, onClose, currentCourses }: GpaCa
 
     if (validSimulated.length === 0) return currentAverage;
 
-    const allCourses: Course[] = [...currentCourses];
+    const allCourses: UserCourse[] = [...currentCourses];
 
+    // Create fake courses to calculate GPA
+    const pastSemester = { year: currentSemester.year - 1, term: currentSemester.term };
     validSimulated.forEach(c => {
+      const fakeCourse: Course = {
+        _id: `sim-${c.id}`,
+        code: `SIM-${c.id}`,
+        name: c.name,
+        credits: Number(c.credit),
+        department: 'Simulation',
+        status: 'approved',
+      };
       allCourses.push({
-        courseName: c.name,
-        courseGrade: Number(c.grade), 
-        courseCredit: Number(c.credit),
-        status: 'completed',
+        _id: `sim-${c.id}`,
+        course: fakeCourse,
+        semester: pastSemester,
+        grades: [{ grade: Number(c.grade), isFinal: true }],
       });
     });
 
     return getWeightedAverage(allCourses);
-  }, [currentCourses, simulatedCourses, currentAverage]);
+  }, [currentCourses, simulatedCourses, currentAverage, currentSemester]);
 
   const difference = projectedAverage - currentAverage;
 

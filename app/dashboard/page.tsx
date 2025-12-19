@@ -3,9 +3,9 @@
 import { useContext, useMemo } from 'react';
 import Link from 'next/link';
 import { UserContext } from '../../context/UserContext';
-import { getDegreeProgress, getWeightedAverage } from '../../lib/CoursesUtil';
+import { getDegreeProgress, getFinalGrade, getWeightedAverage } from '../../lib/CoursesUtil';
 import { useCourses } from '@/hooks/useCourses';
-import { User, Course } from '@/types';
+import { getCourseRuntimeStatus, getCurrentSemester, User, UserCourse } from '@/types';
 import { DashboardCardSkeleton, StatsRowSkeleton } from '@/components/Skeleton';
 import { FiBook, FiTrendingUp, FiBriefcase, FiAward, FiClock, FiCheckCircle, FiTarget } from 'react-icons/fi';
 
@@ -17,10 +17,10 @@ export default function DashboardPage() {
     const degreeProgress = useMemo(() => getDegreeProgress(user as User), [user]);
 
     // Calculate additional stats
-    const completedCourses = useMemo(() => courses.filter((c: Course) => c.courseGrade !== undefined && c.courseGrade !== null).length, [courses]);
-    const totalCredits = useMemo(() => courses.reduce((acc: number, c: Course) => acc + (c.courseCredit || 0), 0), [courses]);
+    const completedCourses = useMemo(() => courses.filter((c: UserCourse) => getCourseRuntimeStatus(c, getCurrentSemester()) === 'completed').length, [courses]);
+    const totalCredits = useMemo(() => courses.reduce((acc: number, c: UserCourse) => acc + (c.course?.credits || 0), 0), [courses]);
     const highestGrade = useMemo(() => {
-        const grades = courses.filter((c: Course) => c.courseGrade !== undefined && c.courseGrade !== null).map((c: Course) => c.courseGrade as number);
+        const grades = courses.filter((c: UserCourse) => getFinalGrade(c) !== undefined && getFinalGrade(c) !== null).map((c: UserCourse) => getFinalGrade(c) as number);
         return grades.length > 0 ? Math.max(...grades) : 0;
     }, [courses]);
     const recentCourses = useMemo(() => [...courses].reverse().slice(0, 3), [courses]);
@@ -174,15 +174,15 @@ export default function DashboardPage() {
                             </div>
                         ) : recentCourses.length > 0 ? (
                             <div className="space-y-3">
-                                {recentCourses.map((course: Course) => (
+                                {recentCourses.map((course: UserCourse) => (
                                     <div key={course._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                                         <div>
-                                            <p className="font-medium text-gray-800">{course.courseName}</p>
-                                            <p className="text-sm text-gray-500">{course.courseCredit} credits</p>
+                                            <p className="font-medium text-gray-800">{course.course?.name}</p>
+                                            <p className="text-sm text-gray-500">{course.course?.credits} credits</p>
                                         </div>
-                                        {course.courseGrade !== undefined && course.courseGrade !== null ? (
-                                            <span className={`text-lg font-bold ${getGradeColor(course.courseGrade)}`}>
-                                                {course.courseGrade}
+                                        {getFinalGrade(course) !== undefined && getFinalGrade(course) !== null ? (
+                                            <span className={`text-lg font-bold ${getGradeColor(getFinalGrade(course) as number)}`}>
+                                                {getFinalGrade(course)}
                                             </span>
                                         ) : (
                                             <span className="text-sm text-gray-400 italic">In Progress</span>

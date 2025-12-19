@@ -52,11 +52,16 @@ export async function GET(request: NextRequest) {
             name: payload.name || payload.email!.split('@')[0],
             profilePicture: payload.picture,
         });
+        
+        // Redirect to onboarding for new users, dashboard for existing users
+        const redirectUrl = result.user.onboardingCompleted 
+        ? `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`
+        : `${process.env.NEXT_PUBLIC_BASE_URL}/onboarding`;
+        const response = NextResponse.redirect(redirectUrl);
 
-        // Set authentication cookie
-        const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`);
+        // Set auth cookie
         setAuthCookie(response, result.token);
-
+        
         return response;
     } catch (error: unknown) {
         console.error('Google OAuth error:', error);

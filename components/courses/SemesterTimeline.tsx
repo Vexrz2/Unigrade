@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useContext } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -21,13 +21,15 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { FiChevronLeft, FiChevronRight, FiMenu, FiCheckCircle, FiClock, FiTarget } from 'react-icons/fi';
-import type { Course, Semester, SemesterTerm } from '@/types';
+import type { UserCourse, Semester, SemesterTerm, CourseRuntimeStatus } from '@/types';
+import { getCurrentSemester, getCourseRuntimeStatus } from '@/types';
 import { useEditCourse } from '@/hooks/useCourses';
 import { useQueryClient } from '@tanstack/react-query';
+import { UserContext } from '@/context/UserContext';
 import toast from 'react-hot-toast';
 
 interface SemesterTimelineProps {
-  courses: Course[];
+  courses: UserCourse[];
 }
 
 // Helper to create semester key
@@ -64,7 +66,7 @@ const getSemesterRange = (startYear: number, endYear: number): Semester[] => {
 };
 
 // Helper to get status badge styles
-const getStatusStyle = (status?: string) => {
+const getStatusStyle = (status: CourseRuntimeStatus) => {
   switch (status) {
     case 'completed':
       return { bg: 'bg-green-100', border: 'border-green-300', text: 'text-green-700', icon: FiCheckCircle };
@@ -77,8 +79,15 @@ const getStatusStyle = (status?: string) => {
   }
 };
 
+// Helper to get final grade
+const getFinalGrade = (course: UserCourse): number | undefined => {
+  if (!course.grades || course.grades.length === 0) return undefined;
+  const finalGrade = course.grades.find(g => g.isFinal);
+  return finalGrade?.grade ?? course.grades[course.grades.length - 1]?.grade;
+};
+
 // Sortable Course Card Component
-function SortableCourseCard({ course }: { course: Course }) {
+function SortableCourseCard({ course, currentSemester }: { course: UserCourse; currentSemester: Semester }) {
   const {
     attributes,
     listeners,
@@ -94,8 +103,10 @@ function SortableCourseCard({ course }: { course: Course }) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const statusStyle = getStatusStyle(course.status);
+  const status = getCourseRuntimeStatus(course, currentSemester);
+  const statusStyle = getStatusStyle(status);
   const StatusIcon = statusStyle.icon;
+  const grade = getFinalGrade(course);
 
   return (
     <div
@@ -109,12 +120,12 @@ function SortableCourseCard({ course }: { course: Course }) {
         <FiMenu size={16} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-800 truncate text-sm">{course.courseName}</p>
+        <p className="font-medium text-gray-800 truncate text-sm">{course.course?.code} - {course.course?.name}</p>
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <StatusIcon size={12} className={statusStyle.text} />
-          <span>{course.courseCredit} credits</span>
-          {course.status === 'completed' && course.courseGrade !== undefined && (
-            <span>• Grade: {course.courseGrade}</span>
+          <span>{course.course?.credits} credits</span>
+          {grade !== undefined && (
+            <span>• Grade: {grade}</span>
           )}
         </div>
       </div>
@@ -123,8 +134,9 @@ function SortableCourseCard({ course }: { course: Course }) {
 }
 
 // Course Card for Drag Overlay
-function CourseCardOverlay({ course }: { course: Course }) {
-  const statusStyle = getStatusStyle(course.status);
+function CourseCardOverlay({ course, currentSemester }: { course: UserCourse; currentSemester: Semester }) {
+  const status = getCourseRuntimeStatus(course, currentSemester);
+  const statusStyle = getStatusStyle(status);
   const StatusIcon = statusStyle.icon;
 
   return (
@@ -133,10 +145,10 @@ function CourseCardOverlay({ course }: { course: Course }) {
         <FiMenu size={16} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-800 truncate text-sm">{course.courseName}</p>
+        <p className="font-medium text-gray-800 truncate text-sm">{course.course?.code} - {course.course?.name}</p>
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <StatusIcon size={12} className={statusStyle.text} />
-          <span>{course.courseCredit} credits</span>
+          <span>{course.course?.credits} credits</span>
         </div>
       </div>
     </div>
@@ -171,14 +183,17 @@ function SemesterColumn({
   courses, 
   isCurrentSemester,
   semesterKey,
+  currentSem,
 }: { 
   semester: Semester | null; 
-  courses: Course[];
+  courses: UserCourse[];
   isCurrentSemester?: boolean;
   semesterKey: string;
+  currentSem: Semester;
 }) {
-  const totalCredits = courses.reduce((sum, c) => sum + c.courseCredit, 0);
-  const completedCredits = courses.filter(c => c.status === 'completed').reduce((sum, c) => sum + c.courseCredit, 0);
+  const totalCredits = courses.reduce((sum, c) => sum + (c.course?.credits ?? 0), 0);
+  const completedCourses = courses.filter(c => getCourseRuntimeStatus(c, currentSem) === 'completed');
+  const completedCredits = completedCourses.reduce((sum, c) => sum + (c.course?.credits ?? 0), 0);
 
   return (
     <div 
@@ -206,7 +221,7 @@ function SemesterColumn({
         <SortableContext items={courses.map(c => c._id!)} strategy={verticalListSortingStrategy}>
           {courses.length > 0 ? (
             courses.map(course => (
-              <SortableCourseCard key={course._id} course={course} />
+              <SortableCourseCard key={course._id} course={course} currentSemester={currentSem} />
             ))
           ) : (
             <DroppableEmptyZone semesterKey={semesterKey} />
@@ -220,38 +235,58 @@ function SemesterColumn({
 export default function SemesterTimeline({ courses }: SemesterTimelineProps) {
   const editCourseMutation = useEditCourse();
   const queryClient = useQueryClient();
-  const [activeCourse, setActiveCourse] = useState<Course | null>(null);
+  const [activeCourse, setActiveCourse] = useState<UserCourse | null>(null);
+  const ctx = useContext(UserContext);
+  const user = ctx?.user;
 
-  // Determine year range from courses
-  const { startYear, endYear, currentSemester } = useMemo(() => {
+  // Get current semester
+  const currentSemester = useMemo(() => getCurrentSemester(), []);
+
+  // Determine year range from user settings or courses
+  const { startYear, endYear } = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-    // Determine current semester based on month
-    let currentTerm: SemesterTerm = 'Fall';
-    if (currentMonth >= 0 && currentMonth < 5) currentTerm = 'Spring';
-    else if (currentMonth >= 5 && currentMonth < 8) currentTerm = 'Summer';
     
-    const years = courses
+    // Use user's degree timeline if available
+    const userStartYear = user?.startYear;
+    const userEndYear = user?.expectedGraduationYear;
+    
+    // Calculate from courses as fallback
+    const courseYears = courses
       .filter(c => c.semester)
       .map(c => c.semester!.year);
     
-    const minYear = years.length > 0 ? Math.min(...years, currentYear) : currentYear - 2;
-    const maxYear = years.length > 0 ? Math.max(...years, currentYear) : currentYear + 2;
+    // Determine start year: user setting, or min of course years, or current year - 2
+    let minYear = currentYear - 2;
+    if (userStartYear) {
+      minYear = userStartYear;
+    } else if (courseYears.length > 0) {
+      minYear = Math.min(...courseYears, currentYear);
+    }
+    
+    // Determine end year: user setting, or max of course years + buffer, or current year + 2
+    let maxYear = currentYear + 2;
+    if (userEndYear) {
+      maxYear = userEndYear;
+    } else if (courseYears.length > 0) {
+      maxYear = Math.max(...courseYears, currentYear) + 1;
+    }
+    
+    // Ensure we always show at least up to current year + 1
+    maxYear = Math.max(maxYear, currentYear + 1);
     
     return {
       startYear: minYear,
-      endYear: Math.max(maxYear, currentYear + 2),
-      currentSemester: { year: currentYear, term: currentTerm },
+      endYear: maxYear,
     };
-  }, [courses]);
+  }, [courses, user?.startYear, user?.expectedGraduationYear]);
 
   // Generate all semesters in range
   const allSemesters = useMemo(() => getSemesterRange(startYear, endYear), [startYear, endYear]);
 
   // Group courses by semester
   const coursesBySemester = useMemo(() => {
-    const grouped = new Map<string, Course[]>();
+    const grouped = new Map<string, UserCourse[]>();
     
     // Initialize with all semesters
     allSemesters.forEach(sem => {
@@ -350,16 +385,18 @@ export default function SemesterTimeline({ courses }: SemesterTimelineProps) {
     // If semester changed, update the course
     if (targetSemesterKey && targetSemesterKey !== currentSemesterKey) {
       const newSemester = parseSemesterKey(targetSemesterKey);
+      if (!newSemester) return; // Invalid semester key, skip
+      
       const queryKey = ['courses', 'list'];
       
       // Optimistic update - update cache immediately
-      const previousCourses = queryClient.getQueryData<Course[]>(queryKey);
+      const previousCourses = queryClient.getQueryData<UserCourse[]>(queryKey);
       
-      queryClient.setQueryData<Course[]>(queryKey, (old) => {
+      queryClient.setQueryData<UserCourse[]>(queryKey, (old) => {
         if (!old) return old;
         return old.map(c => 
           c._id === activeId 
-            ? { ...c, semester: newSemester || undefined }
+            ? { ...c, semester: newSemester }
             : c
         );
       });
@@ -370,7 +407,7 @@ export default function SemesterTimeline({ courses }: SemesterTimelineProps) {
       editCourseMutation.mutate(
         {
           courseId: activeId,
-          formData: { semester: newSemester || undefined }
+          formData: { semester: newSemester }
         },
         {
           onSuccess: () => {
@@ -427,6 +464,7 @@ export default function SemesterTimeline({ courses }: SemesterTimelineProps) {
               semester={null}
               courses={coursesBySemester.get('unassigned') || []}
               semesterKey="unassigned"
+              currentSem={currentSemester}
             />
             
             {/* Semester columns */}
@@ -443,13 +481,14 @@ export default function SemesterTimeline({ courses }: SemesterTimelineProps) {
                   courses={coursesBySemester.get(key) || []}
                   isCurrentSemester={isCurrentSem}
                   semesterKey={key}
+                  currentSem={currentSemester}
                 />
               );
             })}
           </div>
 
           <DragOverlay>
-            {activeCourse ? <CourseCardOverlay course={activeCourse} /> : null}
+            {activeCourse ? <CourseCardOverlay course={activeCourse} currentSemester={currentSemester} /> : null}
           </DragOverlay>
         </DndContext>
       </div>

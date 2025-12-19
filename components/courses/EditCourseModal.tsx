@@ -2,39 +2,29 @@
 
 import React, { useState } from 'react';
 import { FiX, FiPlus, FiTrash2 } from 'react-icons/fi';
-import type { Course, CourseFormData, CourseStatus, CourseCategory, SemesterTerm, GradeAttempt } from '@/types';
+import type { UserCourse, SemesterTerm, GradeAttempt, Semester } from '@/types';
 import { useEditCourse } from '@/hooks/useCourses';
 import toast from 'react-hot-toast';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 5 + i);
 const TERM_OPTIONS: SemesterTerm[] = ['Fall', 'Spring', 'Summer'];
-const STATUS_OPTIONS: { value: CourseStatus; label: string }[] = [
-  { value: 'planned', label: 'Planned' },
-  { value: 'in-progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
-];
-const CATEGORY_OPTIONS: { value: CourseCategory; label: string }[] = [
-  { value: 'required', label: 'Required' },
-  { value: 'elective', label: 'Elective' },
-  { value: 'general', label: 'General Education' },
-];
+
+interface EditFormData {
+  semester: Semester;
+  grades: GradeAttempt[];
+}
 
 // Helper to get initial form data from course
-const getInitialFormData = (course: Course | null): CourseFormData => ({
-  courseName: course?.courseName || '',
-  courseGrade: course?.courseGrade ?? '',
-  courseCredit: course?.courseCredit ?? '',
-  status: course?.status || 'completed',
-  category: course?.category || 'elective',
+const getInitialFormData = (course: UserCourse | null): EditFormData => ({
   semester: course?.semester || { year: CURRENT_YEAR, term: 'Fall' },
-  grades: course?.grades || (course?.courseGrade !== undefined ? [{ grade: course.courseGrade, isFinal: true, label: 'Final' }] : []),
+  grades: course?.grades || [],
 });
 
-export default function EditCourseModal({ isOpen, onClose, currentCourse }: { isOpen: boolean; onClose: () => void; currentCourse: Course | null }) {
+export default function EditCourseModal({ isOpen, onClose, currentCourse }: { isOpen: boolean; onClose: () => void; currentCourse: UserCourse | null }) {
   // Using key prop on the modal component in parent ensures this reinitializes when course changes
-  const [formData, setFormData] = useState<CourseFormData>(() => getInitialFormData(currentCourse));
-  const [errors, setErrors] = useState<{ courseName?: string; courseGrade?: string; courseCredit?: string; general?: string }>({});
+  const [formData, setFormData] = useState<EditFormData>(() => getInitialFormData(currentCourse));
+  const [errors, setErrors] = useState<{ grade?: string; general?: string }>({});
   const editCourseMutation = useEditCourse();
 
   if (!isOpen) return null;
@@ -52,19 +42,6 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
         ...formData, 
         semester: { ...formData.semester!, term: value as SemesterTerm } 
       });
-    } else if (name === 'courseName') {
-      setFormData({ ...formData, [name]: value });
-    } else if (name === 'status' || name === 'category') {
-      setFormData({ ...formData, [name]: value });
-    } else {
-      // For number fields, preserve empty string, otherwise convert to number
-      const processedValue = value === '' ? '' : Number(value);
-      setFormData({ ...formData, [name]: processedValue });
-    }
-    
-    // Clear error for this field when user starts typing
-    if (errors[name as keyof typeof errors]) {
-      setErrors({ ...errors, [name]: undefined });
     }
   };
 
@@ -104,37 +81,13 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
 
-    if (!formData.courseName.trim()) {
-      newErrors.courseName = 'Course name is required';
-    }
-
-    // Grade is only required for completed courses
-    if (formData.status === 'completed') {
-      const hasGrades = formData.grades && formData.grades.length > 0;
-      const hasLegacyGrade = formData.courseGrade !== '' && formData.courseGrade !== undefined;
-      
-      if (!hasGrades && !hasLegacyGrade) {
-        newErrors.courseGrade = 'At least one grade is required for completed courses';
-      }
-      
-      if (hasGrades) {
-        for (const attempt of formData.grades!) {
-          if (isNaN(attempt.grade) || attempt.grade < 0 || attempt.grade > 100) {
-            newErrors.courseGrade = 'All grades must be between 0 and 100';
-            break;
-          }
+    // Validate grades if provided
+    if (formData.grades && formData.grades.length > 0) {
+      for (const attempt of formData.grades) {
+        if (isNaN(attempt.grade) || attempt.grade < 0 || attempt.grade > 100) {
+          newErrors.grade = 'All grades must be between 0 and 100';
+          break;
         }
-      }
-    }
-
-    // Check if credit is provided
-    const creditValue = formData.courseCredit;
-    if (creditValue === null || creditValue === undefined || creditValue === '') {
-      newErrors.courseCredit = 'Course credit is required';
-    } else {
-      const credit = Number(creditValue);
-      if (isNaN(credit) || credit <= 0) {
-        newErrors.courseCredit = 'Course credit must be greater than 0';
       }
     }
 
@@ -151,22 +104,10 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
     }
 
     if (currentCourse && currentCourse._id) {
-      const courseData: Partial<Course> = {
-        courseName: formData.courseName,
-        courseCredit: formData.courseCredit as number,
-        status: formData.status,
-        category: formData.category,
+      const courseData = {
         semester: formData.semester,
         grades: formData.grades,
       };
-
-      // Set courseGrade from final grade for backward compatibility
-      if (formData.grades && formData.grades.length > 0) {
-        const finalGrade = formData.grades.find(g => g.isFinal) || formData.grades[formData.grades.length - 1];
-        courseData.courseGrade = finalGrade.grade;
-      } else if (formData.status === 'completed' && formData.courseGrade !== '') {
-        courseData.courseGrade = formData.courseGrade as number;
-      }
 
       editCourseMutation.mutate(
         { courseId: currentCourse._id, formData: courseData },
@@ -223,23 +164,12 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
             </div>
           )}
 
-          <div className="form-group mb-6">
-            <label className='block text-gray-800 text-sm font-semibold mb-3'>Course Name</label>
-            <input 
-              type="text" 
-              name="courseName" 
-              value={formData.courseName} 
-              onChange={onChange} 
-              placeholder="e.g., Introduction to Computer Science"
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
-                errors.courseName 
-                  ? 'border-red-500 focus:border-red-500' 
-                  : 'border-gray-200 focus:border-theme3'
-              }`}
-            />
-            {errors.courseName && (
-              <p className='text-red-600 text-xs mt-1'>{errors.courseName}</p>
-            )}
+          {/* Course Info (Read-only) */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-semibold text-gray-800 mb-2">
+              {currentCourse?.course?.code} - {currentCourse?.course?.name}
+            </h4>
+            <p className="text-sm text-gray-600">{currentCourse?.course?.credits} credits</p>
           </div>
 
           {/* Semester Selection */}
@@ -269,119 +199,66 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
             </div>
           </div>
 
-          {/* Status and Category Row */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="form-group">
-              <label className='block text-gray-800 text-sm font-semibold mb-3'>Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={onChange}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors text-gray-700"
-              >
-                {STATUS_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className='block text-gray-800 text-sm font-semibold mb-3'>Category</label>
-              <select
-                name="category"
-                value={formData.category || 'elective'}
-                onChange={onChange}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors text-gray-700"
-              >
-                {CATEGORY_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Grade Attempts - only show for completed courses */}
-          {formData.status === 'completed' && (
-            <div className="form-group mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <label className='block text-gray-800 text-sm font-semibold'>Grades</label>
-                <button
-                  type="button"
-                  onClick={addGradeAttempt}
-                  className="flex items-center gap-1 text-sm text-theme3 hover:text-blue-600 transition-colors"
-                >
-                  <FiPlus size={16} />
-                  Add Attempt
-                </button>
-              </div>
-              
-              {formData.grades && formData.grades.length > 0 ? (
-                <div className="space-y-3">
-                  {formData.grades.map((attempt, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <input
-                        type="text"
-                        value={attempt.label || ''}
-                        onChange={(e) => updateGradeAttempt(index, 'label', e.target.value)}
-                        placeholder="Label"
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded text-sm text-gray-700"
-                      />
-                      <input
-                        type="number"
-                        value={attempt.grade}
-                        onChange={(e) => updateGradeAttempt(index, 'grade', Number(e.target.value))}
-                        min={0}
-                        max={100}
-                        placeholder="Grade"
-                        className="w-20 px-3 py-2 border border-gray-200 rounded text-sm text-gray-700"
-                      />
-                      <label className="flex items-center gap-1 text-xs text-gray-600 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={attempt.isFinal || false}
-                          onChange={(e) => updateGradeAttempt(index, 'isFinal', e.target.checked)}
-                          className="w-4 h-4"
-                        />
-                        Final
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => removeGradeAttempt(index)}
-                        className="p-1 text-red-500 hover:text-red-600 transition-colors"
-                      >
-                        <FiTrash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 bg-gray-50 rounded-lg">
-                  <p className="text-gray-500 text-sm">No grades yet. Click &quot;Add Attempt&quot; to add a grade.</p>
-                </div>
-              )}
-              {errors.courseGrade && (
-                <p className='text-red-600 text-xs mt-2'>{errors.courseGrade}</p>
-              )}
-            </div>
-          )}
-
+          {/* Grade Attempts */}
           <div className="form-group mb-6">
-            <label className='block text-gray-800 text-sm font-semibold mb-3'>Course Credit</label>
-            <input 
-              type="number" 
-              name="courseCredit" 
-              value={formData.courseCredit === '' ? '' : (formData.courseCredit ?? '')} 
-              onChange={onChange} 
-              min={0} 
-              step="0.5"
-              placeholder="Credit hours"
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
-                errors.courseCredit 
-                  ? 'border-red-500 focus:border-red-500' 
-                  : 'border-gray-200 focus:border-theme3'
-              }`}
-            />
-            {errors.courseCredit && (
-              <p className='text-red-600 text-xs mt-1'>{errors.courseCredit}</p>
+            <div className="flex items-center justify-between mb-3">
+              <label className='block text-gray-800 text-sm font-semibold'>Grades (optional)</label>
+              <button
+                type="button"
+                onClick={addGradeAttempt}
+                className="flex items-center gap-1 text-sm text-theme3 hover:text-blue-600 transition-colors"
+              >
+                <FiPlus size={16} />
+                Add Grade
+              </button>
+            </div>
+            
+            {formData.grades && formData.grades.length > 0 ? (
+              <div className="space-y-3">
+                {formData.grades.map((attempt, index) => (
+                  <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <input
+                      type="text"
+                      value={attempt.label || ''}
+                      onChange={(e) => updateGradeAttempt(index, 'label', e.target.value)}
+                      placeholder="Label"
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded text-sm text-gray-700"
+                    />
+                    <input
+                      type="number"
+                      value={attempt.grade}
+                      onChange={(e) => updateGradeAttempt(index, 'grade', Number(e.target.value))}
+                      min={0}
+                      max={100}
+                      placeholder="Grade"
+                      className="w-20 px-3 py-2 border border-gray-200 rounded text-sm text-gray-700"
+                    />
+                    <label className="flex items-center gap-1 text-xs text-gray-600 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={attempt.isFinal || false}
+                        onChange={(e) => updateGradeAttempt(index, 'isFinal', e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                      Final
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeGradeAttempt(index)}
+                      className="p-1 text-red-500 hover:text-red-600 transition-colors"
+                    >
+                      <FiTrash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 bg-gray-50 rounded-lg">
+                <p className="text-gray-500 text-sm">No grades yet. Click &quot;Add Grade&quot; to add a grade.</p>
+              </div>
+            )}
+            {errors.grade && (
+              <p className='text-red-600 text-xs mt-2'>{errors.grade}</p>
             )}
           </div>
 
