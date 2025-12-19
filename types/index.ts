@@ -9,27 +9,19 @@ export type Semester = {
 // Course status types
 export type CourseStatus = 'planned' | 'in-progress' | 'completed';
 
-// Course category types
-export type CourseCategory = 'required' | 'elective' | 'general';
-
 // Grade attempt (for tracking multiple test attempts/retakes)
 export type GradeAttempt = {
   grade: number;
-  date?: string; // ISO date string
   label?: string; // e.g., "First attempt", "Retake", "Final exam"
   isFinal?: boolean; // Whether this is the final grade used for GPA
 };
 
 export type Course = {
   _id?: string;
-  courseName?: string;
-  courseCredit: number;
-  courseGrade?: number;
+  name: string;
+  credits: number;
   grades?: GradeAttempt[];
   semester?: Semester;
-  status: CourseStatus;
-  passed?: boolean | null;
-  category?: CourseCategory;
 };
 
 export type Degree = {
@@ -59,13 +51,9 @@ export type UserProfileData = {
 };
 
 export type CourseFormData = {
-  courseName: string;
-  courseGrade: number | string;
-  courseCredit: number | string;
+  name: string;
+  credits: number | string;
   semester?: Semester;
-  status: CourseStatus;
-  passed?: boolean | null;
-  category?: CourseCategory;
   grades?: GradeAttempt[];
 };
 

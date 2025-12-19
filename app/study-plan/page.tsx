@@ -10,6 +10,7 @@ import {
   getPlannedCredits,
   getGPABySemester,
   getCompletedCoursesWithGrades,
+  getFinalGrade,
 } from '../../lib/CoursesUtil';
 import { UserContext } from '../../context/UserContext';
 import api from '../../lib/api';
@@ -115,18 +116,18 @@ export default function StudyPlanPage() {
 
   // Chart.js data for per-course breakdown (includes remaining credits)
   const courseChartData = useMemo(() => {
-    const validCourses = completedCoursesWithGrades.filter(c => c.courseCredit > 0);
-    const earnedCredits = validCourses.reduce((sum, c) => sum + c.courseCredit, 0);
+    const validCourses = completedCoursesWithGrades.filter(c => c.credits > 0);
+    const earnedCredits = validCourses.reduce((sum, c) => sum + c.credits, 0);
     const reqCredits = Number(formData.creditRequirement) || 120;
     const remaining = Math.max(0, reqCredits - earnedCredits);
 
-    const labels = [...validCourses.map(c => c.courseName || 'Unnamed Course')];
-    const data = [...validCourses.map(c => c.courseCredit)];
+    const labels = [...validCourses.map(c => c.name || 'Unnamed Course')];
+    const data = [...validCourses.map(c => c.credits)];
     const colors = [...validCourses.map((_, i) => COURSE_COLORS[i % COURSE_COLORS.length])];
     const details = validCourses.map(c => ({
-      name: c.courseName || 'Unnamed Course',
-      grade: c.courseGrade,
-      credits: c.courseCredit,
+      name: c.name || 'Unnamed Course',
+      grade: getFinalGrade(c),
+      credits: c.credits,
       isRemaining: false,
     }));
 

@@ -1,22 +1,73 @@
 import _ from 'lodash';
-import type { Course, User, Semester, SemesterTerm } from '../types';
+import type { Course, User, Semester, SemesterTerm, CourseStatus } from '../types';
 
 /**
- * Get the final grade for a course (from grades array or legacy courseGrade)
+ * Get the current semester based on the current date
+ */
+export const getCurrentSemester = (): Semester => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  
+  let term: SemesterTerm;
+  if (month >= 0 && month < 5) {
+    term = 'Spring';
+  } else if (month >= 5 && month < 8) {
+    term = 'Summer';
+  } else {
+    term = 'Fall';
+  }
+  
+  return { year, term };
+};
+
+/**
+ * Compare two semesters: returns -1 if a < b, 0 if equal, 1 if a > b
+ */
+export const compareSemesters = (a: Semester, b: Semester): number => {
+  const termOrder: Record<SemesterTerm, number> = { 'Spring': 0, 'Summer': 1, 'Fall': 2 };
+  const aVal = a.year * 10 + termOrder[a.term];
+  const bVal = b.year * 10 + termOrder[b.term];
+  
+  if (aVal < bVal) return -1;
+  if (aVal > bVal) return 1;
+  return 0;
+};
+
+/**
+ * Infer course status from semester
+ * - Past semesters: completed
+ * - Current semester: in-progress
+ * - Future semesters: planned
+ * - No semester: planned
+ */
+export const getCourseStatus = (semester?: Semester): CourseStatus => {
+  if (!semester) return 'planned';
+  
+  const current = getCurrentSemester();
+  const comparison = compareSemesters(semester, current);
+  
+  if (comparison < 0) return 'completed';
+  if (comparison === 0) return 'in-progress';
+  return 'planned';
+};
+
+/**
+ * Get the final grade for a course (from grades array)
  */
 export const getFinalGrade = (course: Course): number | undefined => {
   if (course.grades && course.grades.length > 0) {
     const finalAttempt = course.grades.find(g => g.isFinal) || course.grades[course.grades.length - 1];
     return finalAttempt.grade;
   }
-  return course.courseGrade;
+  return undefined;
 };
 
 /**
  * Get only completed courses with valid grades
  */
 export const getCompletedCoursesWithGrades = (courses: Course[]): Course[] => {
-  return courses.filter(c => c.status === 'completed' && getFinalGrade(c) !== undefined);
+  return courses.filter(c => getCourseStatus(c.semester) === 'completed' && getFinalGrade(c) !== undefined);
 };
 
 /**
@@ -27,14 +78,14 @@ export const getWeightedAverage = (courses: Course[]) => {
   const completedCourses = getCompletedCoursesWithGrades(courses);
   if (completedCourses.length === 0) return 0;
   
-  const sumWeights = _.reduce(completedCourses, (prev, curr) => prev + curr.courseCredit, 0);
+  const sumWeights = _.reduce(completedCourses, (prev, curr) => prev + curr.credits, 0);
   if (sumWeights === 0) return 0;
   
   const sumWeightedAverage = _.reduce(
     completedCourses,
     (prev, curr) => {
       const grade = getFinalGrade(curr) ?? 0;
-      return prev + (grade * curr.courseCredit) / sumWeights;
+      return prev + (grade * curr.credits) / sumWeights;
     },
     0
   );
@@ -104,7 +155,7 @@ export const getGPABySemester = (courses: Course[]): { semester: Semester; gpa: 
       results.push({
         semester,
         gpa: getWeightedAverage(semesterCourses),
-        credits: _.sumBy(completedCourses, c => c.courseCredit),
+        credits: _.sumBy(completedCourses, c => c.credits),
       });
     }
   });
@@ -142,6 +193,7 @@ export const getWorstCourse = (courses: Course[]) => {
       worstCourse = course;
     }
   });
+  console.log(worstCourse);
   return worstCourse;
 };
 
@@ -171,7 +223,7 @@ export const getDegreeProgress = (user: User | null) => {
   if (!user) return NaN;
   // Count all courses (completed + in-progress count towards progress)
   const countableStatuses = ['completed', 'in-progress'];
-  const countableCourses = user.courses.filter(c => countableStatuses.includes(c.status));
+  const countableCourses = user.courses.filter(c => countableStatuses.includes(getCourseStatus(c.semester)));
   const totalCredits = getTotalCredit(countableCourses);
   const creditRequirement = user.degree?.creditRequirement ?? 120;
   return Math.min((totalCredits / creditRequirement) * 100, 100);
@@ -181,24 +233,24 @@ export const getDegreeProgress = (user: User | null) => {
  * Get completed credits only
  */
 export const getCompletedCredits = (courses: Course[]): number => {
-  const completedCourses = courses.filter(c => c.status === 'completed');
-  return _.sumBy(completedCourses, c => c.courseCredit);
+  const completedCourses = courses.filter(c => getCourseStatus(c.semester) === 'completed');
+  return _.sumBy(completedCourses, c => c.credits);
 };
 
 /**
  * Get in-progress credits
  */
 export const getInProgressCredits = (courses: Course[]): number => {
-  const inProgressCourses = courses.filter(c => c.status === 'in-progress');
-  return _.sumBy(inProgressCourses, c => c.courseCredit);
+  const inProgressCourses = courses.filter(c => getCourseStatus(c.semester) === 'in-progress');
+  return _.sumBy(inProgressCourses, c => c.credits);
 };
 
 /**
  * Get planned credits
  */
 export const getPlannedCredits = (courses: Course[]): number => {
-  const plannedCourses = courses.filter(c => c.status === 'planned');
-  return _.sumBy(plannedCourses, c => c.courseCredit);
+  const plannedCourses = courses.filter(c => getCourseStatus(c.semester) === 'planned');
+  return _.sumBy(plannedCourses, c => c.credits);
 };
 
 /**
@@ -208,7 +260,7 @@ export const getFinalAverageRange = (user: User | null) => {
   if (!user) return { low: 0, high: 0, softLow: 0, softHigh: 0 };
   
   const completedCourses = getCompletedCoursesWithGrades(user.courses);
-  const totalCredits = _.sumBy(completedCourses, (course) => course.courseCredit);
+  const totalCredits = _.sumBy(completedCourses, (course) => course.credits);
   const creditRequirement = user.degree?.creditRequirement ?? 120;
   const weightedAverage = getWeightedAverage(completedCourses);
   
@@ -227,19 +279,12 @@ export const getFinalAverageRange = (user: User | null) => {
  * Get total credits from courses
  */
 export const getTotalCredit = (courses: Course[]) => {
-  return _.sumBy(courses, (course) => course.courseCredit);
+  return _.sumBy(courses, (course) => course.credits);
 };
 
 /**
  * Get courses by status
  */
 export const getCoursesByStatus = (courses: Course[], status: string): Course[] => {
-  return courses.filter(c => c.status === status);
-};
-
-/**
- * Get courses by category
- */
-export const getCoursesByCategory = (courses: Course[], category: string): Course[] => {
-  return courses.filter(c => c.category === category);
+  return courses.filter(c => getCourseStatus(c.semester) === status);
 };

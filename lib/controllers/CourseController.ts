@@ -1,27 +1,19 @@
 import { User } from '@/lib/models/UserModel';
-import type { Course, CourseStatus, CourseCategory, Semester, GradeAttempt } from '@/types';
+import type { Course, Semester, GradeAttempt } from '@/types';
 
 interface AddCourseData {
-    courseName: string;
-    courseCredit: number;
-    courseGrade?: number;
+    name: string;
+    credits: number;
     grades?: GradeAttempt[];
     semester?: Semester;
-    status?: CourseStatus;
-    passed?: boolean | null;
-    category?: CourseCategory;
 }
 
 export async function addCourse(userId: string, data: AddCourseData) {
     const { 
-        courseName, 
-        courseGrade, 
-        courseCredit, 
+        name, 
+        credits, 
         grades,
         semester,
-        status = 'completed',
-        passed,
-        category = 'elective',
     } = data;
     
     const user = await User.findById(userId);
@@ -29,33 +21,19 @@ export async function addCourse(userId: string, data: AddCourseData) {
         throw new Error('User not found');
     }
 
-    if (!courseName || typeof courseName !== 'string' || courseName.trim().length === 0) {
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
         throw new Error('Invalid course name');
     }
 
-    if (isNaN(courseCredit) || courseCredit <= 0) {
+    if (isNaN(credits) || credits <= 0) {
         throw new Error('Invalid course credit');
     }
 
-    // Validate grade only for completed courses
-    if (status === 'completed') {
-        // Check if we have grades array or legacy courseGrade
-        const hasGrades = grades && grades.length > 0;
-        const hasLegacyGrade = courseGrade !== undefined && courseGrade !== null;
-        
-        if (!hasGrades && !hasLegacyGrade) {
-            throw new Error('Completed courses must have a grade');
-        }
-        
-        if (hasLegacyGrade && (isNaN(courseGrade) || courseGrade < 0 || courseGrade > 100)) {
-            throw new Error('Invalid course grade');
-        }
-        
-        if (hasGrades) {
-            for (const attempt of grades) {
-                if (isNaN(attempt.grade) || attempt.grade < 0 || attempt.grade > 100) {
-                    throw new Error('Invalid grade attempt value');
-                }
+    // Validate grades if provided
+    if (grades && grades.length > 0) {
+        for (const attempt of grades) {
+            if (isNaN(attempt.grade) || attempt.grade < 0 || attempt.grade > 100) {
+                throw new Error('Invalid grade attempt value');
             }
         }
     }
@@ -70,40 +48,18 @@ export async function addCourse(userId: string, data: AddCourseData) {
         }
     }
 
-    // Validate status
-    if (!['planned', 'in-progress', 'completed'].includes(status)) {
-        throw new Error('Invalid course status');
-    }
-
-    // Validate category if provided
-    if (category && !['required', 'elective', 'general'].includes(category)) {
-        throw new Error('Invalid course category');
-    }
-
     const newCourse: Partial<Course> = {
-        courseName,
-        courseCredit,
-        status,
-        category,
+        name,
+        credits,
     };
 
     // Add grade data
     if (grades && grades.length > 0) {
         newCourse.grades = grades;
-        // Set courseGrade to the final grade for backward compatibility
-        const finalGrade = grades.find(g => g.isFinal) || grades[grades.length - 1];
-        newCourse.courseGrade = finalGrade.grade;
-    } else if (courseGrade !== undefined) {
-        newCourse.courseGrade = courseGrade;
-        newCourse.grades = [{ grade: courseGrade, isFinal: true, label: 'Final' }];
     }
 
     if (semester) {
         newCourse.semester = semester;
-    }
-
-    if (passed !== undefined) {
-        newCourse.passed = passed;
     }
 
     user.courses.push(newCourse);

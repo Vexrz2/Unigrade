@@ -15,30 +15,16 @@ const semesterSchema = new mongoose.Schema({
 }, { _id: false });
 
 const courseSchema = new mongoose.Schema({
-    courseName: { type: String, required: true },
-    // Legacy single grade - kept for backward compatibility
-    courseGrade: { type: Number, min: 0, max: 100 },
-    courseCredit: { type: Number, required: true },
+    name: { type: String, required: true },
+    credits: { type: Number, required: true },
     grades: [gradeAttemptSchema], // Array of grade attempts
     semester: semesterSchema,
-    status: { 
-        type: String, 
-        enum: ['planned', 'in-progress', 'completed'], 
-        default: 'completed',
-        required: true 
-    },
-    passed: { type: Boolean, default: null },
-    category: { 
-        type: String, 
-        enum: ['required', 'elective', 'general'],
-        default: 'elective'
-    },
-});
+}, {timestamps: true});
 
 const degreeSchema = new mongoose.Schema({
-    major: { type: String },
+    major: { type: String, default: 'Other' },
     creditRequirement: { type: Number, default: 120, required: true },
-    type: { type: String, default: 'Other' },
+    type: { type: String },
 });
 
 const savedJobSchema = new mongoose.Schema({
@@ -62,7 +48,7 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
     googleId: { type: String, unique: true, sparse: true }, // Unique Google ID for OAuth users
-    profilePicture: { type: String }, // Profile picture URL from OAuth provider
+    profilePicture: { type: String }, // Profile picture URL
     emailVerified: { type: Boolean, default: false }, // OAuth users are pre-verified
     courses: [courseSchema],
     degree: degreeSchema,

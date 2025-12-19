@@ -1,35 +1,28 @@
 "use client";
 
-import React, { useState } from 'react';
-import type { CourseFormData, CourseStatus, CourseCategory, SemesterTerm, Course } from '@/types';
+import React, { useState, useMemo } from 'react';
+import type { CourseFormData, SemesterTerm, Course } from '@/types';
 import { useAddCourse } from '@/hooks/useCourses';
+import { getCourseStatus } from '@/lib/CoursesUtil';
 import toast from 'react-hot-toast';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 5 + i);
 const TERM_OPTIONS: SemesterTerm[] = ['Fall', 'Spring', 'Summer'];
-const STATUS_OPTIONS: { value: CourseStatus; label: string }[] = [
-  { value: 'planned', label: 'Planned' },
-  { value: 'in-progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
-];
-const CATEGORY_OPTIONS: { value: CourseCategory; label: string }[] = [
-  { value: 'required', label: 'Required' },
-  { value: 'elective', label: 'Elective' },
-  { value: 'general', label: 'General Education' },
-];
 
 export default function AddCourse() {
   const [formData, setFormData] = useState<CourseFormData>({ 
-    courseName: '', 
-    courseGrade: '', 
-    courseCredit: '',
-    status: 'completed',
-    category: 'elective',
+    name: '', 
+    credits: '',
     semester: { year: CURRENT_YEAR, term: 'Fall' },
+    grades: [],
   });
-  const [errors, setErrors] = useState<{ courseName?: string; courseGrade?: string; courseCredit?: string; general?: string }>({});
+  const [gradeInput, setGradeInput] = useState<string>('');
+  const [errors, setErrors] = useState<{ name?: string; grade?: string; credits?: string; general?: string }>({});
   const addCourseMutation = useAddCourse();
+
+  // Infer status from semester
+  const inferredStatus = useMemo(() => getCourseStatus(formData.semester), [formData.semester]);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -44,9 +37,7 @@ export default function AddCourse() {
         ...formData, 
         semester: { ...formData.semester!, term: value as SemesterTerm } 
       });
-    } else if (name === 'courseName') {
-      setFormData({ ...formData, [name]: value });
-    } else if (name === 'status' || name === 'category') {
+    } else if (name === 'name') {
       setFormData({ ...formData, [name]: value });
     } else {
       // For number fields, preserve empty string, otherwise convert to number
@@ -55,38 +46,44 @@ export default function AddCourse() {
     }
     
     // Clear error for this field when user starts typing
-    if (errors[name as keyof typeof errors]) {
+    if (errors?.[name as keyof typeof errors]) {
       setErrors({ ...errors, [name]: undefined });
+    }
+  };
+
+  const onGradeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setGradeInput(e.target.value);
+    if (errors?.grade) {
+      setErrors({ ...errors, grade: undefined });
     }
   };
 
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
 
-    if (!formData.courseName.trim()) {
-      newErrors.courseName = 'Course name is required';
+    if (!formData.name.trim()) {
+      newErrors.name = 'Course name is required';
     }
 
-    // Grade is only required for completed courses
-    if (formData.status === 'completed') {
-      const gradeValue = formData.courseGrade;
-      if (gradeValue === null || gradeValue === undefined || gradeValue === '') {
-        newErrors.courseGrade = 'Grade is required for completed courses';
+    // Grade is only required for completed courses (past semesters)
+    if (inferredStatus === 'completed') {
+      if (gradeInput === '') {
+        newErrors.grade = 'Grade is required for completed courses';
       } else {
-        const grade = Number(gradeValue);
+        const grade = Number(gradeInput);
         if (isNaN(grade) || grade < 0 || grade > 100) {
-          newErrors.courseGrade = 'Grade must be between 0 and 100';
+          newErrors.grade = 'Grade must be between 0 and 100';
         }
       }
     }
 
-    const credit = Number(formData.courseCredit);
+    const credit = Number(formData.credits);
     if (isNaN(credit) || credit <= 0) {
-      newErrors.courseCredit = 'Course credit must be greater than 0';
+      newErrors.credits = 'Course credit must be greater than 0';
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return Object.keys(newErrors ?? {}).length === 0;
   };
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -98,16 +95,14 @@ export default function AddCourse() {
     }
 
     const courseData: Partial<Course> = {
-      courseName: formData.courseName,
-      courseCredit: formData.courseCredit as number,
-      status: formData.status,
-      category: formData.category,
+      name: formData.name,
+      credits: formData.credits as number,
       semester: formData.semester,
     };
 
-    // Only include grade for completed courses
-    if (formData.status === 'completed' && formData.courseGrade !== '') {
-      courseData.courseGrade = formData.courseGrade as number;
+    // Add grade to grades array for completed courses
+    if (inferredStatus === 'completed' && gradeInput !== '') {
+      courseData.grades = [{ grade: Number(gradeInput), isFinal: true, label: 'Final' }];
     }
 
     addCourseMutation.mutate(
@@ -115,13 +110,12 @@ export default function AddCourse() {
       {
         onSuccess: () => {
           setFormData({ 
-            courseName: '', 
-            courseGrade: '', 
-            courseCredit: '',
-            status: 'completed',
-            category: 'elective',
+            name: '', 
+            credits: '',
             semester: { year: CURRENT_YEAR, term: 'Fall' },
+            grades: [],
           });
+          setGradeInput('');
           setErrors({});
           toast.success('Course added successfully!');
         },
@@ -135,13 +129,24 @@ export default function AddCourse() {
     );
   };
 
+  // Get status display text
+  const getStatusDisplay = () => {
+    switch (inferredStatus) {
+      case 'completed': return { text: 'Completed', color: 'text-green-600 bg-green-50' };
+      case 'in-progress': return { text: 'In Progress', color: 'text-blue-600 bg-blue-50' };
+      case 'planned': return { text: 'Planned', color: 'text-yellow-600 bg-yellow-50' };
+    }
+  };
+
+  const statusDisplay = getStatusDisplay();
+
   return (
     <div className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border border-transparent">
       <h2 className='text-2xl font-bold text-gray-800 mb-6 text-center'>Add Course</h2>
       <form onSubmit={onSubmit} className='flex flex-col'>
-        {errors.general && (
+        {errors?.general && (
           <div className='mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded'>
-            <p className='text-red-700 text-sm font-medium'>{errors.general}</p>
+            <p className='text-red-700 text-sm font-medium'>{errors?.general}</p>
           </div>
         )}
 
@@ -149,18 +154,18 @@ export default function AddCourse() {
           <label className='block text-gray-800 text-sm font-semibold mb-3'>Course Name</label>
           <input 
             type="text" 
-            name="courseName" 
-            value={formData.courseName} 
+            name="name" 
+            value={formData.name} 
             onChange={onChange} 
             placeholder="e.g., Introduction to Computer Science"
             className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
-              errors.courseName 
+              errors?.name 
                 ? 'border-red-500 focus:border-red-500' 
                 : 'border-gray-200 focus:border-theme3'
             }`}
           />
-          {errors.courseName && (
-            <p className='text-red-600 text-xs mt-1'>{errors.courseName}</p>
+          {errors?.name && (
+            <p className='text-red-600 text-xs mt-1'>{errors?.name}</p>
           )}
         </div>
 
@@ -189,58 +194,34 @@ export default function AddCourse() {
               ))}
             </select>
           </div>
-        </div>
-
-        {/* Status and Category Row */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="form-group">
-            <label className='block text-gray-800 text-sm font-semibold mb-3'>Status</label>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={onChange}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors text-gray-700"
-            >
-              {STATUS_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className='block text-gray-800 text-sm font-semibold mb-3'>Category</label>
-            <select
-              name="category"
-              value={formData.category || 'elective'}
-              onChange={onChange}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors text-gray-700"
-            >
-              {CATEGORY_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+          {/* Status indicator based on semester */}
+          <div className="mt-2">
+            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusDisplay.color}`}>
+              Status: {statusDisplay.text} (based on semester)
+            </span>
           </div>
         </div>
 
         {/* Grade - only show for completed courses */}
-        {formData.status === 'completed' && (
+        {inferredStatus === 'completed' && (
           <div className="form-group mb-6">
             <label className='block text-gray-800 text-sm font-semibold mb-3'>Grade</label>
             <input 
               type="number" 
-              name="courseGrade" 
-              value={formData.courseGrade === '' ? '' : (formData.courseGrade ?? '')} 
-              onChange={onChange} 
+              name="grade" 
+              value={gradeInput} 
+              onChange={onGradeChange} 
               min={0} 
               max={100} 
               placeholder="0-100"
               className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
-                errors.courseGrade 
+                errors?.grade 
                   ? 'border-red-500 focus:border-red-500' 
                   : 'border-gray-200 focus:border-theme3'
               }`}
             />
-            {errors.courseGrade && (
-              <p className='text-red-600 text-xs mt-1'>{errors.courseGrade}</p>
+            {errors?.grade && (
+              <p className='text-red-600 text-xs mt-1'>{errors.grade}</p>
             )}
           </div>
         )}
@@ -249,20 +230,20 @@ export default function AddCourse() {
           <label className='block text-gray-800 text-sm font-semibold mb-3'>Course Credit</label>
           <input 
             type="number" 
-            name="courseCredit" 
-            value={formData.courseCredit === '' ? '' : (formData.courseCredit ?? '')} 
+            name="credits" 
+            value={formData.credits === '' ? '' : (formData.credits ?? '')} 
             onChange={onChange} 
             min={0} 
             step="0.5"
             placeholder="Credit hours"
             className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
-              errors.courseCredit 
+              errors?.credits 
                 ? 'border-red-500 focus:border-red-500' 
                 : 'border-gray-200 focus:border-theme3'
             }`}
           />
-          {errors.courseCredit && (
-            <p className='text-red-600 text-xs mt-1'>{errors.courseCredit}</p>
+          {errors?.credits && (
+            <p className='text-red-600 text-xs mt-1'>{errors.credits}</p>
           )}
         </div>
 

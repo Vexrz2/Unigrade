@@ -2,8 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { FiX, FiPlus, FiTrash2 } from 'react-icons/fi';
-import { getWeightedAverage } from '@/lib/CoursesUtil';
-import type { Course } from '@/types';
+import { getWeightedAverage, getCurrentSemester } from '@/lib/CoursesUtil';
+import type { Course, Semester } from '@/types';
 
 type SimulatedCourse = {
   id: string;
@@ -25,6 +25,13 @@ export default function GpaCalculator({ isOpen, onClose, currentCourses }: GpaCa
 
   const currentAverage = useMemo(() => getWeightedAverage(currentCourses), [currentCourses]);
 
+  // Create a past semester for simulated courses (so they're treated as completed)
+  const pastSemester: Semester = useMemo(() => {
+    const current = getCurrentSemester();
+    // Use a past semester (previous year, same term)
+    return { year: current.year - 1, term: current.term };
+  }, []);
+
   const projectedAverage = useMemo(() => {
     const validSimulated = simulatedCourses.filter(
       c => c.name && c.grade !== '' && c.credit !== '' && Number(c.grade) >= 0 && Number(c.credit) > 0
@@ -36,15 +43,16 @@ export default function GpaCalculator({ isOpen, onClose, currentCourses }: GpaCa
 
     validSimulated.forEach(c => {
       allCourses.push({
-        courseName: c.name,
-        courseGrade: Number(c.grade), 
-        courseCredit: Number(c.credit),
-        status: 'completed',
+        _id: `simulated-${c.id}`,
+        name: c.name,
+        credits: Number(c.credit),
+        grades: [{ grade: Number(c.grade), isFinal: true }],
+        semester: pastSemester, // Use past semester so it's treated as completed
       });
     });
 
     return getWeightedAverage(allCourses);
-  }, [currentCourses, simulatedCourses, currentAverage]);
+  }, [currentCourses, simulatedCourses, currentAverage, pastSemester]);
 
   const difference = projectedAverage - currentAverage;
 

@@ -1,70 +1,59 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { FiX, FiPlus, FiTrash2 } from 'react-icons/fi';
-import type { Course, CourseFormData, CourseStatus, CourseCategory, SemesterTerm, GradeAttempt } from '@/types';
+import type { Course, CourseFormData, SemesterTerm, GradeAttempt } from '@/types';
 import { useEditCourse } from '@/hooks/useCourses';
+import { getCourseStatus } from '@/lib/CoursesUtil';
 import toast from 'react-hot-toast';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 5 + i);
 const TERM_OPTIONS: SemesterTerm[] = ['Fall', 'Spring', 'Summer'];
-const STATUS_OPTIONS: { value: CourseStatus; label: string }[] = [
-  { value: 'planned', label: 'Planned' },
-  { value: 'in-progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
-];
-const CATEGORY_OPTIONS: { value: CourseCategory; label: string }[] = [
-  { value: 'required', label: 'Required' },
-  { value: 'elective', label: 'Elective' },
-  { value: 'general', label: 'General Education' },
-];
 
 // Helper to get initial form data from course
 const getInitialFormData = (course: Course | null): CourseFormData => ({
-  courseName: course?.courseName || '',
-  courseGrade: course?.courseGrade ?? '',
-  courseCredit: course?.courseCredit ?? '',
-  status: course?.status || 'completed',
-  category: course?.category || 'elective',
+  name: course?.name || '',
+  credits: course?.credits ?? '',
   semester: course?.semester || { year: CURRENT_YEAR, term: 'Fall' },
-  grades: course?.grades || (course?.courseGrade !== undefined ? [{ grade: course.courseGrade, isFinal: true, label: 'Final' }] : []),
+  grades: course?.grades || [],
 });
 
 export default function EditCourseModal({ isOpen, onClose, currentCourse }: { isOpen: boolean; onClose: () => void; currentCourse: Course | null }) {
   // Using key prop on the modal component in parent ensures this reinitializes when course changes
   const [formData, setFormData] = useState<CourseFormData>(() => getInitialFormData(currentCourse));
-  const [errors, setErrors] = useState<{ courseName?: string; courseGrade?: string; courseCredit?: string; general?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; grade?: string; credits?: string; general?: string }>({});
   const editCourseMutation = useEditCourse();
+
+  // Infer status from semester
+  const inferredStatus = useMemo(() => getCourseStatus(formData.semester), [formData.semester]);
 
   if (!isOpen) return null;
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name: fieldName, value } = e.target;
     
-    if (name === 'semesterYear') {
+    if (fieldName === 'semesterYear') {
       setFormData({ 
         ...formData, 
         semester: { ...formData.semester!, year: Number(value) } 
       });
-    } else if (name === 'semesterTerm') {
+    } else if (fieldName === 'semesterTerm') {
       setFormData({ 
         ...formData, 
         semester: { ...formData.semester!, term: value as SemesterTerm } 
       });
-    } else if (name === 'courseName') {
-      setFormData({ ...formData, [name]: value });
-    } else if (name === 'status' || name === 'category') {
-      setFormData({ ...formData, [name]: value });
-    } else {
+    } else if (fieldName === 'name') {
+      setFormData({ ...formData, name: value });
+    } else if (fieldName === 'credits') {
       // For number fields, preserve empty string, otherwise convert to number
       const processedValue = value === '' ? '' : Number(value);
-      setFormData({ ...formData, [name]: processedValue });
+      setFormData({ ...formData, credits: processedValue });
     }
     
     // Clear error for this field when user starts typing
-    if (errors[name as keyof typeof errors]) {
-      setErrors({ ...errors, [name]: undefined });
+    if (errors[fieldName as keyof typeof errors]) {
+      setErrors({ ...errors, [fieldName]: undefined });
     }
   };
 
@@ -104,23 +93,22 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
 
-    if (!formData.courseName.trim()) {
-      newErrors.courseName = 'Course name is required';
+    if (!formData.name.trim()) {
+      newErrors.name = 'Course name is required';
     }
 
-    // Grade is only required for completed courses
-    if (formData.status === 'completed') {
+    // Grade is only required for completed courses (past semesters)
+    if (inferredStatus === 'completed') {
       const hasGrades = formData.grades && formData.grades.length > 0;
-      const hasLegacyGrade = formData.courseGrade !== '' && formData.courseGrade !== undefined;
       
-      if (!hasGrades && !hasLegacyGrade) {
-        newErrors.courseGrade = 'At least one grade is required for completed courses';
+      if (!hasGrades) {
+        newErrors.grade = 'At least one grade is required for completed courses';
       }
       
       if (hasGrades) {
         for (const attempt of formData.grades!) {
           if (isNaN(attempt.grade) || attempt.grade < 0 || attempt.grade > 100) {
-            newErrors.courseGrade = 'All grades must be between 0 and 100';
+            newErrors.grade = 'All grades must be between 0 and 100';
             break;
           }
         }
@@ -128,19 +116,30 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
     }
 
     // Check if credit is provided
-    const creditValue = formData.courseCredit;
+    const creditValue = formData.credits;
     if (creditValue === null || creditValue === undefined || creditValue === '') {
-      newErrors.courseCredit = 'Course credit is required';
+      newErrors.credits = 'Course credit is required';
     } else {
       const credit = Number(creditValue);
       if (isNaN(credit) || credit <= 0) {
-        newErrors.courseCredit = 'Course credit must be greater than 0';
+        newErrors.credits = 'Course credit must be greater than 0';
       }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  // Get status display text
+  const getStatusDisplay = () => {
+    switch (inferredStatus) {
+      case 'completed': return { text: 'Completed', color: 'text-green-600 bg-green-50' };
+      case 'in-progress': return { text: 'In Progress', color: 'text-blue-600 bg-blue-50' };
+      case 'planned': return { text: 'Planned', color: 'text-yellow-600 bg-yellow-50' };
+    }
+  };
+
+  const statusDisplay = getStatusDisplay();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,21 +151,11 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
 
     if (currentCourse && currentCourse._id) {
       const courseData: Partial<Course> = {
-        courseName: formData.courseName,
-        courseCredit: formData.courseCredit as number,
-        status: formData.status,
-        category: formData.category,
+        name: formData.name,
+        credits: formData.credits as number,
         semester: formData.semester,
         grades: formData.grades,
       };
-
-      // Set courseGrade from final grade for backward compatibility
-      if (formData.grades && formData.grades.length > 0) {
-        const finalGrade = formData.grades.find(g => g.isFinal) || formData.grades[formData.grades.length - 1];
-        courseData.courseGrade = finalGrade.grade;
-      } else if (formData.status === 'completed' && formData.courseGrade !== '') {
-        courseData.courseGrade = formData.courseGrade as number;
-      }
 
       editCourseMutation.mutate(
         { courseId: currentCourse._id, formData: courseData },
@@ -227,18 +216,18 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
             <label className='block text-gray-800 text-sm font-semibold mb-3'>Course Name</label>
             <input 
               type="text" 
-              name="courseName" 
-              value={formData.courseName} 
+              name="name" 
+              value={formData.name} 
               onChange={onChange} 
               placeholder="e.g., Introduction to Computer Science"
               className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
-                errors.courseName 
+                errors.name 
                   ? 'border-red-500 focus:border-red-500' 
                   : 'border-gray-200 focus:border-theme3'
               }`}
             />
-            {errors.courseName && (
-              <p className='text-red-600 text-xs mt-1'>{errors.courseName}</p>
+            {errors.name && (
+              <p className='text-red-600 text-xs mt-1'>{errors.name}</p>
             )}
           </div>
 
@@ -267,40 +256,16 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
                 ))}
               </select>
             </div>
-          </div>
-
-          {/* Status and Category Row */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="form-group">
-              <label className='block text-gray-800 text-sm font-semibold mb-3'>Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={onChange}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors text-gray-700"
-              >
-                {STATUS_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className='block text-gray-800 text-sm font-semibold mb-3'>Category</label>
-              <select
-                name="category"
-                value={formData.category || 'elective'}
-                onChange={onChange}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors text-gray-700"
-              >
-                {CATEGORY_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+            {/* Status indicator based on semester */}
+            <div className="mt-2">
+              <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusDisplay.color}`}>
+                Status: {statusDisplay.text} (based on semester)
+              </span>
             </div>
           </div>
 
           {/* Grade Attempts - only show for completed courses */}
-          {formData.status === 'completed' && (
+          {inferredStatus === 'completed' && (
             <div className="form-group mb-6">
               <div className="flex items-center justify-between mb-3">
                 <label className='block text-gray-800 text-sm font-semibold'>Grades</label>
@@ -358,8 +323,8 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
                   <p className="text-gray-500 text-sm">No grades yet. Click &quot;Add Attempt&quot; to add a grade.</p>
                 </div>
               )}
-              {errors.courseGrade && (
-                <p className='text-red-600 text-xs mt-2'>{errors.courseGrade}</p>
+              {errors.grade && (
+                <p className='text-red-600 text-xs mt-2'>{errors.grade}</p>
               )}
             </div>
           )}
@@ -368,20 +333,20 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
             <label className='block text-gray-800 text-sm font-semibold mb-3'>Course Credit</label>
             <input 
               type="number" 
-              name="courseCredit" 
-              value={formData.courseCredit === '' ? '' : (formData.courseCredit ?? '')} 
+              name="credits" 
+              value={formData.credits === '' ? '' : (formData.credits ?? '')} 
               onChange={onChange} 
               min={0} 
               step="0.5"
               placeholder="Credit hours"
               className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
-                errors.courseCredit 
+                errors.credits 
                   ? 'border-red-500 focus:border-red-500' 
                   : 'border-gray-200 focus:border-theme3'
               }`}
             />
-            {errors.courseCredit && (
-              <p className='text-red-600 text-xs mt-1'>{errors.courseCredit}</p>
+            {errors.credits && (
+              <p className='text-red-600 text-xs mt-1'>{errors.credits}</p>
             )}
           </div>
 

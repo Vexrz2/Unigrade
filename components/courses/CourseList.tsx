@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import { getMaxImprovement, getWorstCourse } from '../../lib/CoursesUtil';
+import { getMaxImprovement, getWorstCourse, getFinalGrade, getCourseStatus } from '../../lib/CoursesUtil';
 import { PiSortAscendingThin } from 'react-icons/pi';
 import { IoIosSearch } from 'react-icons/io';
 import { TiDelete } from 'react-icons/ti';
@@ -34,19 +34,6 @@ const getStatusBadge = (status?: string) => {
   }
 };
 
-// Helper to get category badge styles
-const getCategoryBadge = (category?: string) => {
-  switch (category) {
-    case 'required':
-      return { bg: 'bg-red-50', text: 'text-red-600', label: 'Required' };
-    case 'general':
-      return { bg: 'bg-teal-50', text: 'text-teal-600', label: 'General Ed' };
-    case 'elective':
-    default:
-      return { bg: 'bg-gray-50', text: 'text-gray-600', label: 'Elective' };
-  }
-};
-
 // Helper to sort by semester
 const semesterSortValue = (semester?: Semester): number => {
   if (!semester) return 0;
@@ -66,7 +53,7 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
   
   // Only calculate worst course from completed courses with grades
   const completedCourses = useMemo(() => 
-    courses.filter((c: Course) => c.status === 'completed' && c.courseGrade !== undefined), 
+    courses.filter((c: Course) => getCourseStatus(c.semester) === 'completed' && getFinalGrade(c) !== undefined), 
     [courses]
   );
   const worstCourse = useMemo(() => getWorstCourse(completedCourses), [completedCourses]);
@@ -79,27 +66,27 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
     // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter((course) => 
-        course.courseName && course.courseName.toLowerCase().includes(searchQuery.toLowerCase())
+        course.name && course.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     
     // Apply status filter
     if (statusFilter) {
-      filtered = filtered.filter((course) => course.status === statusFilter);
+      filtered = filtered.filter((course) => getCourseStatus(course.semester) === statusFilter);
     }
     
     // Apply sort
     switch (selectValue) {
       case "gradeDesc":
-        return [...filtered].sort((a, b) => (b.courseGrade ?? 0) - (a.courseGrade ?? 0));
+        return [...filtered].sort((a, b) => (getFinalGrade(b) ?? 0) - (getFinalGrade(a) ?? 0));
       case "gradeAsc":
-        return [...filtered].sort((a, b) => (a.courseGrade ?? 0) - (b.courseGrade ?? 0));
+        return [...filtered].sort((a, b) => (getFinalGrade(a) ?? 0) - (getFinalGrade(b) ?? 0));
       case "creditDesc":
-        return [...filtered].sort((a, b) => (b.courseCredit ?? 0) - (a.courseCredit ?? 0));
+        return [...filtered].sort((a, b) => (b.credits ?? 0) - (a.credits ?? 0));
       case "creditAsc":
-        return [...filtered].sort((a, b) => (a.courseCredit ?? 0) - (b.courseCredit ?? 0));
+        return [...filtered].sort((a, b) => (a.credits ?? 0) - (b.credits ?? 0));
       case "alphabetical":
-        return [...filtered].sort((a, b) => (a.courseName ?? '').localeCompare(b.courseName ?? ''));
+        return [...filtered].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
       case "semesterDesc":
         return [...filtered].sort((a, b) => semesterSortValue(b.semester) - semesterSortValue(a.semester));
       case "semesterAsc":
@@ -155,15 +142,16 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
   };
 
   const renderCourseCard = (course: Course) => {
-    const statusBadge = getStatusBadge(course.status);
-    const categoryBadge = getCategoryBadge(course.category);
+    const courseStatus = getCourseStatus(course.semester);
+    const statusBadge = getStatusBadge(courseStatus);
     const StatusIcon = statusBadge.icon;
+    const finalGrade = getFinalGrade(course);
 
     return (
       <div key={course._id} id={course._id} className='bg-gray-50 hover:bg-gray-100 m-2 border border-gray-200 rounded-lg shadow-sm p-4 flex items-center justify-between transition-colors'>
         <div className='course-details flex flex-col flex-1'>
           <div className="flex items-center gap-2 mb-2">
-            <h3 className='font-bold text-xl text-gray-800'>{course.courseName}</h3>
+            <h3 className='font-bold text-xl text-gray-800'>{course.name}</h3>
           </div>
           
           {/* Badges row */}
@@ -171,9 +159,6 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}>
               <StatusIcon size={12} />
               {statusBadge.label}
-            </span>
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${categoryBadge.bg} ${categoryBadge.text}`}>
-              {categoryBadge.label}
             </span>
             {course.semester && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-600">
@@ -185,10 +170,10 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
           
           {/* Course details */}
           <div className='flex flex-wrap gap-4 text-gray-600'>
-            {course.status === 'completed' && course.courseGrade !== undefined && (
-              <p className='text-md font-medium'>Grade: <span className='font-semibold text-gray-800'>{course.courseGrade}</span></p>
+            {courseStatus === 'completed' && finalGrade !== undefined && (
+              <p className='text-md font-medium'>Grade: <span className='font-semibold text-gray-800'>{finalGrade}</span></p>
             )}
-            <p className='text-md font-medium'>Credits: <span className='font-semibold text-gray-800'>{course.courseCredit}</span></p>
+            <p className='text-md font-medium'>Credits: <span className='font-semibold text-gray-800'>{course.credits}</span></p>
             {course.grades && course.grades.length > 1 && (
               <p className='text-md font-medium text-blue-600'>
                 {course.grades.length} attempts
@@ -196,7 +181,7 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
             )}
           </div>
           
-          {worstCourse._id === course._id && maxImprovement > 0 && course.status === 'completed' && (
+          {worstCourse?._id === course._id && maxImprovement > 0 && courseStatus === 'completed' && (
             <div className='mt-2 bg-red-50 border-l-4 border-red-500 p-2 rounded'>
               <span className='text-sm text-red-700'>
                 Your worst course: lowers average by <span className='font-bold'>{maxImprovement.toFixed(2)}</span> points.

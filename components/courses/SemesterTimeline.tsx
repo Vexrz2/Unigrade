@@ -24,6 +24,7 @@ import { FiChevronLeft, FiChevronRight, FiMenu, FiCheckCircle, FiClock, FiTarget
 import type { Course, Semester, SemesterTerm } from '@/types';
 import { useEditCourse } from '@/hooks/useCourses';
 import { useQueryClient } from '@tanstack/react-query';
+import { getCourseStatus, getFinalGrade } from '@/lib/CoursesUtil';
 import toast from 'react-hot-toast';
 
 interface SemesterTimelineProps {
@@ -94,8 +95,10 @@ function SortableCourseCard({ course }: { course: Course }) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const statusStyle = getStatusStyle(course.status);
+  const courseStatus = getCourseStatus(course.semester);
+  const statusStyle = getStatusStyle(courseStatus);
   const StatusIcon = statusStyle.icon;
+  const finalGrade = getFinalGrade(course);
 
   return (
     <div
@@ -109,12 +112,12 @@ function SortableCourseCard({ course }: { course: Course }) {
         <FiMenu size={16} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-800 truncate text-sm">{course.courseName}</p>
+        <p className="font-medium text-gray-800 truncate text-sm">{course.name}</p>
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <StatusIcon size={12} className={statusStyle.text} />
-          <span>{course.courseCredit} credits</span>
-          {course.status === 'completed' && course.courseGrade !== undefined && (
-            <span>• Grade: {course.courseGrade}</span>
+          <span>{course.credits} credits</span>
+          {courseStatus === 'completed' && finalGrade !== undefined && (
+            <span>• Grade: {finalGrade}</span>
           )}
         </div>
       </div>
@@ -124,7 +127,8 @@ function SortableCourseCard({ course }: { course: Course }) {
 
 // Course Card for Drag Overlay
 function CourseCardOverlay({ course }: { course: Course }) {
-  const statusStyle = getStatusStyle(course.status);
+  const courseStatus = getCourseStatus(course.semester);
+  const statusStyle = getStatusStyle(courseStatus);
   const StatusIcon = statusStyle.icon;
 
   return (
@@ -133,10 +137,10 @@ function CourseCardOverlay({ course }: { course: Course }) {
         <FiMenu size={16} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-800 truncate text-sm">{course.courseName}</p>
+        <p className="font-medium text-gray-800 truncate text-sm">{course.name}</p>
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <StatusIcon size={12} className={statusStyle.text} />
-          <span>{course.courseCredit} credits</span>
+          <span>{course.credits} credits</span>
         </div>
       </div>
     </div>
@@ -177,8 +181,8 @@ function SemesterColumn({
   isCurrentSemester?: boolean;
   semesterKey: string;
 }) {
-  const totalCredits = courses.reduce((sum, c) => sum + c.courseCredit, 0);
-  const completedCredits = courses.filter(c => c.status === 'completed').reduce((sum, c) => sum + c.courseCredit, 0);
+  const totalCredits = courses.reduce((sum, c) => sum + c.credits, 0);
+  const completedCredits = courses.filter(c => getCourseStatus(c.semester) === 'completed').reduce((sum, c) => sum + c.credits, 0);
 
   return (
     <div 
