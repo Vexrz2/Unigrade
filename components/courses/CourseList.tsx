@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import { getMaxImprovement, getWorstCourse, getFinalGrade, getCourseStatus } from '../../lib/CoursesUtil';
+import { getMaxImprovement, getWorstCourse, getFinalGrade, getCourseStatus, semesterSortValue, getSemesterKey } from '../../lib/CoursesUtil';
 import { PiSortAscendingThin } from 'react-icons/pi';
 import { IoIosSearch } from 'react-icons/io';
 import { TiDelete } from 'react-icons/ti';
@@ -13,12 +13,6 @@ import { useCourses, useDeleteCourse } from '../../hooks/useCourses';
 import type { Course, Semester } from '../../types';
 import toast from 'react-hot-toast';
 import { CourseListSkeleton } from '../Skeleton';
-
-// Helper to format semester
-const formatSemester = (semester?: Semester) => {
-  if (!semester) return 'No semester';
-  return `${semester.term} ${semester.year}`;
-};
 
 // Helper to get status badge styles
 const getStatusBadge = (status?: string) => {
@@ -34,11 +28,10 @@ const getStatusBadge = (status?: string) => {
   }
 };
 
-// Helper to sort by semester
-const semesterSortValue = (semester?: Semester): number => {
-  if (!semester) return 0;
-  const termOrder = { 'Spring': 0, 'Summer': 1, 'Fall': 2 };
-  return semester.year * 10 + (termOrder[semester.term] || 0);
+// Helper to format semester
+const formatSemester = (semester?: Semester) => {
+  if (!semester) return 'No semester';
+  return `${semester.term} ${semester.year}`;
 };
 
 export default function CourseList({ isLoading }: { isLoading: boolean }) {
@@ -100,17 +93,15 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
   const coursesBySemester = useMemo(() => {
     const grouped = new Map<string, Course[]>();
     courseList.forEach(course => {
-      const key = course.semester 
-        ? `${course.semester.year}-${course.semester.term}` 
-        : 'unassigned';
+      const key = getSemesterKey(course.semester);
       if (!grouped.has(key)) {
         grouped.set(key, []);
       }
       grouped.get(key)!.push(course);
     });
     
-    // Sort keys by semester
-    const sortedEntries = Array.from(grouped.entries()).sort((a, b) => {
+    // Sort keys by semester (most recent first)
+    return Array.from(grouped.entries()).sort((a, b) => {
       if (a[0] === 'unassigned') return 1;
       if (b[0] === 'unassigned') return -1;
       const [yearA, termA] = a[0].split('-');
@@ -118,10 +109,8 @@ export default function CourseList({ isLoading }: { isLoading: boolean }) {
       const termOrder = { 'Spring': 0, 'Summer': 1, 'Fall': 2 };
       const valA = Number(yearA) * 10 + (termOrder[termA as keyof typeof termOrder] || 0);
       const valB = Number(yearB) * 10 + (termOrder[termB as keyof typeof termOrder] || 0);
-      return valB - valA; // Most recent first
+      return valB - valA;
     });
-    
-    return sortedEntries;
   }, [courseList]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -4,11 +4,8 @@ import React, { useState, useMemo } from 'react';
 import type { CourseFormData, SemesterTerm, Course } from '@/types';
 import { useAddCourse } from '@/hooks/useCourses';
 import { getCourseStatus } from '@/lib/CoursesUtil';
+import { CURRENT_YEAR, YEAR_OPTIONS, TERM_OPTIONS, getStatusDisplay } from '@/lib/constants';
 import toast from 'react-hot-toast';
-
-const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 5 + i);
-const TERM_OPTIONS: SemesterTerm[] = ['Fall', 'Spring', 'Summer'];
 
 export default function AddCourse() {
   const [formData, setFormData] = useState<CourseFormData>({ 
@@ -129,16 +126,7 @@ export default function AddCourse() {
     );
   };
 
-  // Get status display text
-  const getStatusDisplay = () => {
-    switch (inferredStatus) {
-      case 'completed': return { text: 'Completed', color: 'text-green-600 bg-green-50' };
-      case 'in-progress': return { text: 'In Progress', color: 'text-blue-600 bg-blue-50' };
-      case 'planned': return { text: 'Planned', color: 'text-yellow-600 bg-yellow-50' };
-    }
-  };
-
-  const statusDisplay = getStatusDisplay();
+  const statusDisplay = getStatusDisplay(inferredStatus);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border border-transparent">

@@ -24,18 +24,12 @@ import { FiChevronLeft, FiChevronRight, FiMenu, FiCheckCircle, FiClock, FiTarget
 import type { Course, Semester, SemesterTerm } from '@/types';
 import { useEditCourse } from '@/hooks/useCourses';
 import { useQueryClient } from '@tanstack/react-query';
-import { getCourseStatus, getFinalGrade } from '@/lib/CoursesUtil';
+import { getCourseStatus, getFinalGrade, getSemesterKey } from '@/lib/CoursesUtil';
 import toast from 'react-hot-toast';
 
 interface SemesterTimelineProps {
   courses: Course[];
 }
-
-// Helper to create semester key
-const getSemesterKey = (semester?: Semester): string => {
-  if (!semester) return 'unassigned';
-  return `${semester.year}-${semester.term}`;
-};
 
 // Helper to parse semester key
 const parseSemesterKey = (key: string): Semester | null => {

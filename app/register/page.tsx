@@ -7,7 +7,7 @@ import { UserContext } from '../../context/UserContext';
 import { MajorOptions } from '../../components/misc/SelectOptions';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
-import { useDoubleViewPasswordToggle } from '../../hooks/useViewPasswordToggle';
+import { useViewPasswordToggle } from '../../hooks/useViewPasswordToggle';
 import toast from 'react-hot-toast';
 
 export default function RegisterPage() {
@@ -16,7 +16,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const ctx = useContext(UserContext);
   const setUser = ctx?.setUser;
-  const { isPasswordHidden, inputType, toggleViewPassword } = useDoubleViewPasswordToggle();
+  const { isPasswordHidden, inputType, toggleViewPassword } = useViewPasswordToggle();
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
 

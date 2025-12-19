@@ -127,17 +127,6 @@ export const groupCoursesBySemester = (courses: Course[]): Map<string, Course[]>
 };
 
 /**
- * Calculate GPA for a specific semester
- */
-export const getSemesterGPA = (courses: Course[], semester: Semester): number => {
-  const semesterCourses = courses.filter(c => 
-    c.semester?.year === semester.year && 
-    c.semester?.term === semester.term
-  );
-  return getWeightedAverage(semesterCourses);
-};
-
-/**
  * Get GPA by semester for all semesters
  */
 export const getGPABySemester = (courses: Course[]): { semester: Semester; gpa: number; credits: number }[] => {
@@ -193,7 +182,6 @@ export const getWorstCourse = (courses: Course[]) => {
       worstCourse = course;
     }
   });
-  console.log(worstCourse);
   return worstCourse;
 };
 
@@ -280,11 +268,4 @@ export const getFinalAverageRange = (user: User | null) => {
  */
 export const getTotalCredit = (courses: Course[]) => {
   return _.sumBy(courses, (course) => course.credits);
-};
-
-/**
- * Get courses by status
- */
-export const getCoursesByStatus = (courses: Course[], status: string): Course[] => {
-  return courses.filter(c => getCourseStatus(c.semester) === status);
 };

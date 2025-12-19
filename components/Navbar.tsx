@@ -4,7 +4,6 @@ import React, { useContext, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import _ from 'lodash';
 import { UserContext } from '../context/UserContext';
 import faviconImage from '../app/favicon.png';
 import { FiMenu, FiX } from 'react-icons/fi';
@@ -27,7 +26,7 @@ export default function Navbar() {
       : `${base} text-gray-200 hover:text-white`;
   };
 
-  if (!_.isEmpty(user)) {
+  if (user) {
     return (
       <nav className="navbar bg-theme4 shadow-md border-b border-theme3 relative">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">

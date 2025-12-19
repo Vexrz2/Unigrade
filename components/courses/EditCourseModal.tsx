@@ -5,11 +5,8 @@ import { FiX, FiPlus, FiTrash2 } from 'react-icons/fi';
 import type { Course, CourseFormData, SemesterTerm, GradeAttempt } from '@/types';
 import { useEditCourse } from '@/hooks/useCourses';
 import { getCourseStatus } from '@/lib/CoursesUtil';
+import { CURRENT_YEAR, YEAR_OPTIONS, TERM_OPTIONS, getStatusDisplay } from '@/lib/constants';
 import toast from 'react-hot-toast';
-
-const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 5 + i);
-const TERM_OPTIONS: SemesterTerm[] = ['Fall', 'Spring', 'Summer'];
 
 // Helper to get initial form data from course
 const getInitialFormData = (course: Course | null): CourseFormData => ({
@@ -130,16 +127,7 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
     return Object.keys(newErrors).length === 0;
   };
 
-  // Get status display text
-  const getStatusDisplay = () => {
-    switch (inferredStatus) {
-      case 'completed': return { text: 'Completed', color: 'text-green-600 bg-green-50' };
-      case 'in-progress': return { text: 'In Progress', color: 'text-blue-600 bg-blue-50' };
-      case 'planned': return { text: 'Planned', color: 'text-yellow-600 bg-yellow-50' };
-    }
-  };
-
-  const statusDisplay = getStatusDisplay();
+  const statusDisplay = getStatusDisplay(inferredStatus);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
