@@ -236,7 +236,7 @@ export default function StudyPlanPage() {
 
   const updateDegree = async (payload: typeof formData) => {
     try {
-      const res = await api.patch('/degree/update-degree', payload);
+      const res = await api.patch('/users/update-degree', payload);
       toast.success('Degree settings saved successfully!');
       if (setUser) setUser(res.data.updatedUser);
     } catch (err: unknown) {

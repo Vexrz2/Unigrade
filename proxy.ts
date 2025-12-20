@@ -24,7 +24,7 @@ export default function Proxy(req: NextRequest) {
     //     '/api/courses/course-list',
     //     '/api/courses/update-course',
     //     '/api/courses/delete-course',
-    //     '/api/degree/update-degree',
+    //     '/api/users/update-degree',
     // ];
 
     const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));

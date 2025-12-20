@@ -140,11 +140,11 @@ export default function OnboardingPage() {
     
     setIsLoading(true);
     try {
-      // Update degree info (skip /users/update which requires multipart/form-data)
-      await api.patch('/degree/update-degree', {
-        type: degreeType,
+      // Update degree info
+      await api.patch('/users/update-degree', {
+        degreeType,
         major,
-        creditRequirement: 120,
+        creditRequirement: 120, // default
       });
       
       await api.patch('/users/update-years', {
