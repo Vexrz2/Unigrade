@@ -6,15 +6,19 @@ import api from '../../lib/api';
 export default function RecoverPasswordPage() {
   const [formData, setFormData] = useState({ email: '' });
   const [showMessage, setShowMessage] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      setShowMessage(true);
       await api.post('/auth/recover-password', formData);
+      setShowMessage(true);
+      setErrorMessage('');
     } catch (err) {
+      const errorResponse = err as { response?: { data?: { message?: string } } };
+      setErrorMessage(errorResponse?.response?.data?.message ?? 'Failed to send recovery email');
       console.error(err);
     }
   };
@@ -61,6 +65,12 @@ export default function RecoverPasswordPage() {
               </div>
             )}
           </div>
+
+          {errorMessage && (
+            <div className="px-8 py-4 text-center text-red-600 font-semibold">
+              {errorMessage}
+            </div>
+          )}
 
           {/* Footer Link */}
           <div className='border-t border-gray-200 px-8 py-4 text-center'>
