@@ -8,7 +8,7 @@ import { MajorOptions, DegreeTypes } from '@/components/misc/SelectOptions';
 import UniMascot from '@/components/onboarding/UniMascot';
 import OnboardingAddCourse from '@/components/onboarding/OnboardingAddCourse';
 import { useViewPasswordToggle } from '@/hooks/useViewPasswordToggle';
-import { FiEye, FiEyeOff, FiCheck, FiArrowRight, FiArrowLeft, FiLock, FiUser, FiBook, FiCalendar } from 'react-icons/fi';
+import { FiEye, FiEyeOff, FiCheck, FiArrowLeft, FiLock, FiUser, FiBook, FiCalendar } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 type OnboardingStep = 'account' | 'degree' | 'courses';
@@ -33,6 +33,7 @@ export default function OnboardingPage() {
   const ctx = useContext(UserContext);
   const setUser = ctx?.setUser;
   const user = ctx?.user;
+  const userLoading = ctx?.loading ?? true;
   
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('account');
   const [isLoading, setIsLoading] = useState(false);
@@ -56,14 +57,23 @@ export default function OnboardingPage() {
 
   // Load email from sessionStorage on mount
   useEffect(() => {
+    // Wait for user context to finish loading before making redirect decisions
+    if (userLoading) return;
+    
     const storedEmail = sessionStorage.getItem('onboarding_email');
     if (storedEmail) {
       setEmail(storedEmail);
     } else if (!user) {
       // No email in storage and no user, redirect to register
       router.push('/register');
+    } else if (user && !user.onboardingCompleted && currentStep === 'account') {
+      // Google sign-in case: no need for email, skip to degree step
+      setCurrentStep('degree');
+    } else if (user && user.onboardingCompleted) {
+      // User already completed onboarding, redirect to dashboard
+      router.push('/dashboard');
     }
-  }, [user, router]);
+  }, [user, userLoading, router, currentStep]);
 
   // Redirect if user already completed onboarding
   useEffect(() => {
@@ -293,8 +303,6 @@ export default function OnboardingPage() {
           className="w-full bg-theme3 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {isLoading ? 'Creating...' : 'Next'}
-          <FiArrowRight />
-          <FiArrowRight />
         </button>
       </div>
     </div>
@@ -382,7 +390,6 @@ export default function OnboardingPage() {
           className="w-full bg-theme3 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {isLoading ? 'Saving...' : 'Continue'}
-          <FiArrowRight />
         </button>
       </div>
     </div>
