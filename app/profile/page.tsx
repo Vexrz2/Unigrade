@@ -1,17 +1,14 @@
 "use client";
 
-import React, { useContext, useEffect, useState, useMemo } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '../../lib/api';
 import { UserContext } from '../../context/UserContext';
-import { MajorOptions } from '../../components/misc/SelectOptions';
 import ChangePasswordModal from '../../components/profile/ChangePasswordModal';
 import DeleteAccountModal from '../../components/profile/DeleteAccountModal';
 import { useModal } from '../../hooks/useModal';
-import { UserProfileData } from '@/types';
 import toast from 'react-hot-toast';
 import { ProfileSkeleton } from '@/components/Skeleton';
-import { FiCalendar } from 'react-icons/fi';
 
 export default function ProfilePage() {
   const ctx = useContext(UserContext);
@@ -19,32 +16,24 @@ export default function ProfilePage() {
   const setUser = ctx?.setUser;
   const loading = ctx?.loading ?? true;
   const router = useRouter();
-  const [formData, setFormData] = useState({ username: '', email: '', major: '' });
+  const [formData, setFormData] = useState({ username: '', email: '' });
   const passwordModal = useModal();
   const deleteModal = useModal();
   const [changePasswordErrorMessage, setChangePasswordErrorMessage] = useState('');
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
-  const [startYear, setStartYear] = useState<number>(new Date().getFullYear());
-  const [expectedGraduationYear, setExpectedGraduationYear] = useState<number>(new Date().getFullYear() + 4);
-  const [isUpdatingYears, setIsUpdatingYears] = useState(false);
-
-  // Year options: 10 years in past to 10 years in future
-  const currentYear = new Date().getFullYear();
-  const yearOptions = useMemo(() => Array.from({ length: 21 }, (_, i) => currentYear - 10 + i), [currentYear]);
 
   useEffect(() => {
     const setUserData = async () => {
-      if (user?.degree) await setFormData({ username: user.username ?? '', email: user.email ?? '', major: user.degree.major ?? '' });
-    else if (user?.username && user?.email) await setFormData({ username: user.username, email: user.email, major: '' });
+      if (user?.username && user?.email) {
+        setFormData({ username: user.username, email: user.email });
+      }
       if (user?.profilePicture) setProfilePicture(user.profilePicture);
-      if (user?.startYear) setStartYear(user.startYear);
-      if (user?.expectedGraduationYear) setExpectedGraduationYear(user.expectedGraduationYear);
     };
     setUserData();
   }, [user]);
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFormData({ ...formData, [e.target.name]: e.target.value } as UserProfileData);
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -65,12 +54,11 @@ export default function ProfilePage() {
     updateUser(formData);
   };
 
-  const updateUser = async (payload: { username: string; email: string; major: string, profilePictureFile?: File | null }) => {
+  const updateUser = async (payload: { username: string; email: string; profilePictureFile?: File | null }) => {
     try {
       const formData = new FormData();
       formData.append('username', payload.username);
       formData.append('email', payload.email);
-      formData.append('major', payload.major);
       formData.append('profilePicture', payload.profilePictureFile || profilePictureFile || new Blob());
       
       const res = await api.patch('/users/update', formData, {
@@ -125,39 +113,6 @@ export default function ProfilePage() {
       setChangePasswordErrorMessage(errorResponse?.response?.data?.message ?? String(error));
       console.error(errorResponse?.response ?? error);
     }
-  };
-
-  const updateYears = async (newStartYear?: number, newExpectedGraduationYear?: number) => {
-    setIsUpdatingYears(true);
-    try {
-      const updateData: Record<string, number> = {};
-      if (newStartYear !== undefined) updateData.startYear = newStartYear;
-      if (newExpectedGraduationYear !== undefined) updateData.expectedGraduationYear = newExpectedGraduationYear;
-
-      const res = await api.patch('/users/update-years', updateData);
-      if (setUser) setUser(res.data.user);
-      toast.success('Timeline updated!');
-    } catch (err: unknown) {
-      const errorResponse = err as { response?: { data?: { message?: string } } };
-      toast.error(errorResponse?.response?.data?.message ?? 'Failed to update timeline');
-      // Revert to previous values
-      if (user?.startYear) setStartYear(user.startYear);
-      if (user?.expectedGraduationYear) setExpectedGraduationYear(user.expectedGraduationYear);
-    } finally {
-      setIsUpdatingYears(false);
-    }
-  };
-
-  const handleStartYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newYear = Number(e.target.value);
-    setStartYear(newYear);
-    updateYears(newYear, undefined);
-  };
-
-  const handleGraduationYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newYear = Number(e.target.value);
-    setExpectedGraduationYear(newYear);
-    updateYears(undefined, newYear);
   };
 
   return (
@@ -244,18 +199,6 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className='block text-gray-700 text-sm font-semibold mb-2'>Major</label>
-                  <select
-                    value={formData.major}
-                    name='major'
-                    onChange={onChange}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors"
-                  >
-                    <MajorOptions />
-                  </select>
-                </div>
-
                 <button
                   type="submit"
                   className='w-full bg-theme3 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-colors'
@@ -263,53 +206,6 @@ export default function ProfilePage() {
                   Save Changes
                 </button>
               </form>
-            </div>
-
-            {/* Academic Timeline */}
-            <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-              <h2 className='text-2xl font-bold text-gray-800 mb-2 flex items-center gap-2'>
-                <FiCalendar className="text-theme3" />
-                Academic Timeline
-              </h2>
-              <p className='text-gray-600 text-sm mb-6'>Set your degree timeline to customize your semester view</p>
-              
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="form-group">
-                  <label className='block text-gray-700 text-sm font-semibold mb-2'>Started In</label>
-                  <select
-                    value={startYear}
-                    onChange={handleStartYearChange}
-                    disabled={isUpdatingYears}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors disabled:opacity-50"
-                  >
-                    {yearOptions.map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">When you started your degree program</p>
-                </div>
-
-                <div className="form-group">
-                  <label className='block text-gray-700 text-sm font-semibold mb-2'>Expected Graduation</label>
-                  <select
-                    value={expectedGraduationYear}
-                    onChange={handleGraduationYearChange}
-                    disabled={isUpdatingYears}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors disabled:opacity-50"
-                  >
-                    {yearOptions.map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">When you expect to complete your degree</p>
-                </div>
-              </div>
-
-              {expectedGraduationYear < startYear && (
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm">
-                  ⚠️ Graduation year should be after your start year
-                </div>
-              )}
             </div>
 
             {/* Account Actions */}

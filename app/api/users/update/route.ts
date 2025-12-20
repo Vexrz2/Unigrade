@@ -14,7 +14,6 @@ export async function PATCH(request: NextRequest) {
         const formData = await request.formData();
         const username = formData.get('username') as string;
         const email = formData.get('email') as string;
-        const major = formData.get('major') as string;
         const profilePictureFile = formData.get('profilePicture') as File | null;
         
         let profilePictureBase64: string | undefined;
@@ -28,7 +27,6 @@ export async function PATCH(request: NextRequest) {
         const data = {
             username,
             email,
-            major,
             profilePicture: profilePictureBase64
         };
         

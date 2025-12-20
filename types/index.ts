@@ -50,7 +50,6 @@ export type User = {
 export type UserProfileData = {
   username: string;
   email: string;
-  major: string;
 };
 
 export type CourseFormData = {

@@ -51,6 +51,13 @@ export default function StudyPlanPage() {
   const [formData, setFormData] = useState({ degreeType: '', major: '', creditRequirement: 120 });
   const [activeTab, setActiveTab] = useState<'overview' | 'timeline'>('overview');
   const gpaCalculatorModal = useModal();
+  
+  // Academic Timeline state
+  const currentYear = new Date().getFullYear();
+  const yearOptions = useMemo(() => Array.from({ length: 21 }, (_, i) => currentYear - 10 + i), [currentYear]);
+  const [startYear, setStartYear] = useState<number>(currentYear);
+  const [expectedGraduationYear, setExpectedGraduationYear] = useState<number>(currentYear + 4);
+  const [isUpdatingYears, setIsUpdatingYears] = useState(false);
 
   // GPA Trend chart data
   const gpaTrendData = useMemo(() => {
@@ -237,6 +244,44 @@ export default function StudyPlanPage() {
       toast.error(errorResponse?.response?.data?.message ?? 'Failed to save changes');
       console.error(errorResponse?.response ?? err);
     }
+  };
+
+  // Initialize academic timeline from user
+  useEffect(() => {
+    if (user?.startYear) setStartYear(user.startYear);
+    if (user?.expectedGraduationYear) setExpectedGraduationYear(user.expectedGraduationYear);
+  }, [user?.startYear, user?.expectedGraduationYear]);
+
+  const updateYears = async (newStartYear?: number, newExpectedGraduationYear?: number) => {
+    setIsUpdatingYears(true);
+    try {
+      const updateData: Record<string, number> = {};
+      if (newStartYear !== undefined) updateData.startYear = newStartYear;
+      if (newExpectedGraduationYear !== undefined) updateData.expectedGraduationYear = newExpectedGraduationYear;
+
+      const res = await api.patch('/users/update-years', updateData);
+      if (setUser) setUser(res.data.user);
+      toast.success('Timeline updated!');
+    } catch (err: unknown) {
+      const errorResponse = err as { response?: { data?: { message?: string } } };
+      toast.error(errorResponse?.response?.data?.message ?? 'Failed to update timeline');
+      if (user?.startYear) setStartYear(user.startYear);
+      if (user?.expectedGraduationYear) setExpectedGraduationYear(user.expectedGraduationYear);
+    } finally {
+      setIsUpdatingYears(false);
+    }
+  };
+
+  const handleStartYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newYear = Number(e.target.value);
+    setStartYear(newYear);
+    updateYears(newYear, undefined);
+  };
+
+  const handleGraduationYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newYear = Number(e.target.value);
+    setExpectedGraduationYear(newYear);
+    updateYears(undefined, newYear);
   };
 
   return (
@@ -481,6 +526,53 @@ export default function StudyPlanPage() {
                   </button>
                 </div>
               </form>
+            </div>
+
+            {/* Academic Timeline */}
+            <div className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow mt-6">
+              <h2 className='text-2xl font-bold text-gray-800 mb-2 flex items-center gap-2'>
+                <FiCalendar className="text-theme3" />
+                Academic Timeline
+              </h2>
+              <p className='text-gray-600 text-sm mb-6'>Set your degree timeline to customize your semester view</p>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="form-group">
+                  <label className='block text-gray-700 text-sm font-semibold mb-2'>Started In</label>
+                  <select
+                    value={startYear}
+                    onChange={handleStartYearChange}
+                    disabled={isUpdatingYears}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors disabled:opacity-50"
+                  >
+                    {yearOptions.map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">When you started your degree program</p>
+                </div>
+
+                <div className="form-group">
+                  <label className='block text-gray-700 text-sm font-semibold mb-2'>Expected Graduation</label>
+                  <select
+                    value={expectedGraduationYear}
+                    onChange={handleGraduationYearChange}
+                    disabled={isUpdatingYears}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors disabled:opacity-50"
+                  >
+                    {yearOptions.map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">When you expect to complete your degree</p>
+                </div>
+              </div>
+
+              {expectedGraduationYear < startYear && (
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm">
+                  ⚠️ Graduation year should be after your start year
+                </div>
+              )}
             </div>
           </>
         ) : (
