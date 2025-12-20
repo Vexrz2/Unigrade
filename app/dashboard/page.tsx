@@ -33,14 +33,6 @@ export default function DashboardPage() {
         return 'text-red-600';
     };
 
-    // Get progress bar color based on percentage
-    const getProgressColor = (progress: number) => {
-        if (progress >= 75) return 'bg-green-500';
-        if (progress >= 50) return 'bg-blue-500';
-        if (progress >= 25) return 'bg-yellow-500';
-        return 'bg-red-500';
-    };
-
     return (
         <div className="min-h-screen flex flex-col items-center bg-theme2 px-4 py-12">
             <div className="w-full max-w-6xl">
@@ -70,12 +62,12 @@ export default function DashboardPage() {
                                 </div>
                                 <h3 className='text-gray-700 font-semibold'>Weighted Average</h3>
                             </div>
-                            <p className={`text-4xl font-bold mb-4 ${getGradeColor(weightedAverage ?? 0)}`}>
-                                {(weightedAverage ?? 0).toFixed(2)}
+                            <p className={`text-4xl font-bold mb-4`}>
+                                {(weightedAverage ?? 0).toFixed(0)}
                             </p>
                             <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
                                 <div 
-                                    className={`h-2 rounded-full ${getProgressColor(weightedAverage ?? 0)}`}
+                                    className={`h-2 rounded-full bg-green-500`}
                                     style={{ width: `${Math.min(weightedAverage ?? 0, 100)}%` }}
                                 ></div>
                             </div>
@@ -92,10 +84,10 @@ export default function DashboardPage() {
                                 </div>
                                 <h3 className='text-gray-700 font-semibold'>Degree Progress</h3>
                             </div>
-                            <p className='text-4xl font-bold text-blue-600 mb-4'>{(degreeProgress ?? 0).toFixed(1)}%</p>
+                            <p className='text-4xl font-bold mb-4'>{(degreeProgress ?? 0).toFixed(1)}%</p>
                             <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
                                 <div 
-                                    className={`h-2 rounded-full ${getProgressColor(degreeProgress ?? 0)}`}
+                                    className={`h-2 rounded-full bg-blue-500`}
                                     style={{ width: `${Math.min(degreeProgress ?? 0, 100)}%` }}
                                 ></div>
                             </div>
