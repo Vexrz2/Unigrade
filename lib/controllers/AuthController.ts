@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '@/lib/models/UserModel';
 import Mailjet from 'node-mailjet';
 import { validatePassword, validateUsername, validateEmail, validatePasswordMatch, VALIDATION_RULES } from '@/lib/validation';
+import { getJWTSecret, generatePasswordResetToken } from '@/lib/security';
 
 export async function handleGoogleAuth(data: {
     googleId: string;
@@ -48,7 +49,7 @@ export async function handleGoogleAuth(data: {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || '', { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user._id }, getJWTSecret(), { expiresIn: '1h' });
 
     return { token, user };
 }
@@ -119,7 +120,7 @@ export async function registerUser(data: {
     await newUser.save();
 
     // Generate JWT token
-    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET || '', { expiresIn: '1h' });
+    const token = jwt.sign({ userId: newUser._id }, getJWTSecret(), { expiresIn: '1h' });
 
     return { token, user: newUser };
 }
@@ -127,8 +128,12 @@ export async function registerUser(data: {
 export async function loginUser(data: { email: string; password: string }) {
     const { email, password } = data;
     const user = await User.findOne({ email });
+    
+    // Generic error message to prevent user enumeration
+    const invalidCredentialsError = 'Invalid email or password';
+    
     if (!user) {
-        throw new Error('Invalid email');
+        throw new Error(invalidCredentialsError);
     }
 
     // Check if user is using OAuth
@@ -138,27 +143,26 @@ export async function loginUser(data: { email: string; password: string }) {
 
     // Verify password for local users
     if (!user.password) {
-        throw new Error('Invalid authentication method');
+        throw new Error(invalidCredentialsError);
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-        throw new Error('Invalid password');
+        throw new Error(invalidCredentialsError);
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || '', { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user._id }, getJWTSecret(), { expiresIn: '1h' });
     return { token, user };
 }
 
 export async function recoverUserPassword(email: string) {
     const user = await User.findOne({ email });
-    if (!user) {
-        throw new Error('No user associated with email');
-    }
-
-    // Check if user is using OAuth
-    if (user.authProvider === 'google') {
-        throw new Error('This account uses Google Sign-In. Password recovery is not available for Google accounts.');
+    
+    // Always return success to prevent email enumeration
+    // but only send email if user exists and is not using OAuth
+    if (!user || user.authProvider === 'google') {
+        // Return success even if user doesn't exist (prevents enumeration)
+        return { message: 'If an account exists with this email, a recovery email has been sent.' };
     }
 
     const mailjet = new Mailjet({
@@ -166,9 +170,17 @@ export async function recoverUserPassword(email: string) {
         apiSecret: process.env.MJ_APIKEY_PRIVATE || '',
     });
 
-    const newPassword = Math.random().toString(36).slice(-10);
-    const saltRounds = 10;
-    const newHashedPassword = await bcrypt.hash(newPassword, saltRounds);
+    // Generate cryptographically secure password reset token
+    const { token: resetToken, expiresAt } = generatePasswordResetToken();
+    
+    // Store the reset token and expiration in the user document
+    user.passwordResetToken = resetToken;
+    user.passwordResetExpires = expiresAt;
+    await user.save();
+    
+    // Build reset URL
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const resetUrl = `${baseUrl}/recover-password?token=${resetToken}`;
 
     try {
         await mailjet.post('send', { version: 'v3.1' }).request({
@@ -183,19 +195,17 @@ export async function recoverUserPassword(email: string) {
                             Email: email,
                         },
                     ],
-                    Subject: 'Recovery password',
-                    TextPart: 'You requested to reset your password. Your new password is ' + newPassword + '. You may change it at your profile page.',
-                    HTMLPart: '<h3>You requested to reset your password.</h3><br />Your new password is ' + newPassword + '. You may change it at your profile page.',
+                    Subject: 'Password Reset Request',
+                    TextPart: `You requested to reset your password. Click the link below to reset it (expires in 1 hour):\n\n${resetUrl}\n\nIf you did not request this, please ignore this email.`,
+                    HTMLPart: `<h3>Password Reset Request</h3><p>You requested to reset your password. Click the link below to reset it (expires in 1 hour):</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, please ignore this email.</p>`,
                 },
             ],
         });
     } catch (err) {
-        console.error(err);
+        console.error('Failed to send recovery email:', err);
     }
 
-    user.password = newHashedPassword;
-    await user.save();
-    return { message: 'Recovery mail sent.' };
+    return { message: 'If an account exists with this email, a recovery email has been sent.' };
 }
 
 export async function updateUserPassword(userId: string, data: { currentPassword: string; newPassword: string }) {
@@ -232,4 +242,33 @@ export async function updateUserPassword(userId: string, data: { currentPassword
     user.password = newHashedPassword;
     await user.save();
     return { message: 'Password changed.' };
+}
+
+export async function resetPasswordWithToken(token: string, newPassword: string) {
+    // Find user with valid reset token
+    const user = await User.findOne({
+        passwordResetToken: token,
+        passwordResetExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+        throw new Error('Invalid or expired password reset token');
+    }
+
+    // Validate new password
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+        throw new Error(passwordValidation.error);
+    }
+
+    // Hash and save new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    user.password = hashedPassword;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    return { message: 'Password has been reset successfully.' };
 }

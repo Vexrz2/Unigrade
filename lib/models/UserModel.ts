@@ -50,6 +50,8 @@ const userSchema = new mongoose.Schema({
     googleId: { type: String, unique: true, sparse: true }, // Unique Google ID for OAuth users
     profilePicture: { type: String }, // Profile picture URL
     emailVerified: { type: Boolean, default: false }, // OAuth users are pre-verified
+    passwordResetToken: { type: String }, // Secure password reset token
+    passwordResetExpires: { type: Date }, // Token expiration timestamp
     courses: [courseSchema],
     degree: degreeSchema,
     savedJobs: [savedJobSchema], // Array of saved job objects

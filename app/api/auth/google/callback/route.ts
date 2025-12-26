@@ -3,6 +3,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { connectDB } from '@/lib/db';
 import { handleGoogleAuth } from '@/lib/controllers/AuthController';
 import { setAuthCookie } from '@/lib/auth';
+import { verifyOAuthState } from '@/lib/security';
 
 export async function GET(request: NextRequest) {
     try {
@@ -11,10 +12,17 @@ export async function GET(request: NextRequest) {
         const searchParams = request.nextUrl.searchParams;
         const code = searchParams.get('code');
         const error = searchParams.get('error');
+        const state = searchParams.get('state');
 
         if (error) {
             // User denied access or other error
             return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/login?error=google_auth_failed`);
+        }
+
+        // Verify OAuth state
+        const expectedState = request.cookies.get('oauth_state')?.value;
+        if (!state || !expectedState || !verifyOAuthState(state, expectedState)) {
+            return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/login?error=invalid_state`);
         }
 
         if (!code) {
@@ -57,6 +65,9 @@ export async function GET(request: NextRequest) {
         const redirectPath = result.user.onboardingCompleted === false ? '/onboarding' : '/dashboard';
         const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}${redirectPath}`);
         setAuthCookie(response, result.token);
+        
+        // Clear the OAuth state cookie
+        response.cookies.delete('oauth_state');
 
         return response;
     } catch (error: unknown) {

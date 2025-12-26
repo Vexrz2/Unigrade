@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { User } from '@/lib/models/UserModel';
+import { getJWTSecret } from '@/lib/security';
 
 export async function authMiddleware(request: NextRequest) {
     const token = request.cookies.get('token')?.value;
@@ -10,7 +11,7 @@ export async function authMiddleware(request: NextRequest) {
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || '') as { userId: string };
+        const decoded = jwt.verify(token, getJWTSecret()) as { userId: string };
         const user = await User.findById(decoded.userId);
         if (!user) {
             return null;

@@ -2,7 +2,7 @@ import { User } from '@/lib/models/UserModel';
 import { validateUsername, validateEmail, VALIDATION_RULES } from '@/lib/validation';
 
 export async function getUser(userId: string) {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).select('-password -passwordResetToken -passwordResetExpires');
     if (!user) {
         throw new Error('User not found');
     }
@@ -45,7 +45,7 @@ export async function updateUser(userId: string, data: { username: string; email
     }
 
     await User.findByIdAndUpdate(userId, updateData);
-    const updatedUser = await User.findById(userId);
+    const updatedUser = await User.findById(userId).select('-password -passwordResetToken -passwordResetExpires');
     return updatedUser;
 }
 

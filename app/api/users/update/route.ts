@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { authMiddleware, unauthorizedResponse } from '@/lib/auth';
 import { updateUser } from '@/lib/controllers/UserController';
+import { validateFileUpload } from '@/lib/security';
 
 export async function PATCH(request: NextRequest) {
     try {
@@ -19,6 +20,12 @@ export async function PATCH(request: NextRequest) {
         let profilePictureBase64: string | undefined;
         
         if (profilePictureFile && profilePictureFile.size > 0) {
+            // Validate file upload for security
+            const fileValidation = validateFileUpload(profilePictureFile);
+            if (!fileValidation.isValid) {
+                return NextResponse.json({ message: fileValidation.error }, { status: 400 });
+            }
+            
             const bytes = await profilePictureFile.arrayBuffer();
             const buffer = Buffer.from(bytes);
             profilePictureBase64 = `data:${profilePictureFile.type};base64,${buffer.toString('base64')}`;

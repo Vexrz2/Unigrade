@@ -1,6 +1,6 @@
 import { User } from '@/lib/models/UserModel';
 import type { Course, Semester, GradeAttempt } from '@/types';
-import { validateCourseName, validateCredits, validateGrade, VALIDATION_RULES } from '@/lib/validation';
+import { validateCourseName, validateCredits, validateGrade, validateSemester, VALIDATION_RULES } from '@/lib/validation';
 
 interface AddCourseData {
     name: string;
@@ -46,11 +46,9 @@ export async function addCourse(userId: string, data: AddCourseData) {
 
     // Validate semester if provided
     if (semester) {
-        if (!semester.year || !semester.term) {
-            throw new Error('Invalid semester format');
-        }
-        if (!['Fall', 'Spring', 'Summer'].includes(semester.term)) {
-            throw new Error('Invalid semester term');
+        const semesterValidation = validateSemester(semester);
+        if (!semesterValidation.isValid) {
+            throw new Error(semesterValidation.error);
         }
     }
 
@@ -90,6 +88,40 @@ export async function updateCourse(userId: string, courseId: string, updatedCour
     const course = user.courses.id(courseId);
     if (!course) {
         throw new Error('Course not found');
+    }
+
+    // Validate course name if provided
+    if (updatedCourseData.name !== undefined) {
+        const nameValidation = validateCourseName(updatedCourseData.name);
+        if (!nameValidation.isValid) {
+            throw new Error(nameValidation.error);
+        }
+    }
+
+    // Validate credits if provided
+    if (updatedCourseData.credits !== undefined) {
+        const creditsValidation = validateCredits(updatedCourseData.credits);
+        if (!creditsValidation.isValid) {
+            throw new Error(creditsValidation.error);
+        }
+    }
+
+    // Validate grades if provided
+    if (updatedCourseData.grades && updatedCourseData.grades.length > 0) {
+        for (const attempt of updatedCourseData.grades) {
+            const gradeValidation = validateGrade(attempt.grade);
+            if (!gradeValidation.isValid) {
+                throw new Error(VALIDATION_RULES.course.grade.messages.invalid);
+            }
+        }
+    }
+
+    // Validate semester if provided
+    if (updatedCourseData.semester) {
+        const semesterValidation = validateSemester(updatedCourseData.semester);
+        if (!semesterValidation.isValid) {
+            throw new Error(semesterValidation.error);
+        }
     }
 
     Object.assign(course, updatedCourseData);
