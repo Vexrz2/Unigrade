@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '@/lib/models/UserModel';
 import Mailjet from 'node-mailjet';
+import { validatePassword, validateUsername, validateEmail, validatePasswordMatch, VALIDATION_RULES } from '@/lib/validation';
 
 export async function handleGoogleAuth(data: {
     googleId: string;
@@ -61,24 +62,39 @@ export async function registerUser(data: {
 }) {
     const { username, password, confirmPassword, email, major } = data;
 
+    // Validate username
+    const usernameValidation = validateUsername(username);
+    if (!usernameValidation.isValid) {
+        throw new Error(usernameValidation.error);
+    }
+
+    // Validate email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+        throw new Error(emailValidation.error);
+    }
+
+    // Validate password length
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+        throw new Error(passwordValidation.error);
+    }
+
+    // Validate password match
+    const matchValidation = validatePasswordMatch(password, confirmPassword);
+    if (!matchValidation.isValid) {
+        throw new Error(matchValidation.error);
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ username });
     if (existingUser) {
-        throw new Error('User already exists');
+        throw new Error(VALIDATION_RULES.username.messages.taken);
     }
 
     const existingEmail = await User.findOne({ email });
     if (existingEmail) {
-        throw new Error('Email already in use');
-    }
-
-    const isValidEmail = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email);
-    if (!isValidEmail) {
-        throw new Error('Invalid Email');
-    }
-
-    if (password !== confirmPassword) {
-        throw new Error("Passwords don't match");
+        throw new Error(VALIDATION_RULES.email.messages.taken);
     }
 
     // Hash the password
@@ -202,6 +218,12 @@ export async function updateUserPassword(userId: string, data: { currentPassword
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
         throw new Error('Invalid password');
+    }
+
+    // Validate new password length
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+        throw new Error(passwordValidation.error);
     }
 
     const saltRounds = 10;

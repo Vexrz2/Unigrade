@@ -9,6 +9,7 @@ import DeleteAccountModal from '../../components/profile/DeleteAccountModal';
 import { useModal } from '../../hooks/useModal';
 import toast from 'react-hot-toast';
 import { ProfileSkeleton } from '@/components/Skeleton';
+import { validateProfileForm, type ProfileValidationErrors } from '@/lib/validation';
 
 export default function ProfilePage() {
   const ctx = useContext(UserContext);
@@ -17,6 +18,7 @@ export default function ProfilePage() {
   const loading = ctx?.loading ?? true;
   const router = useRouter();
   const [formData, setFormData] = useState({ username: '', email: '' });
+  const [validationErrors, setValidationErrors] = useState<ProfileValidationErrors>({});
   const passwordModal = useModal();
   const deleteModal = useModal();
   const [changePasswordErrorMessage, setChangePasswordErrorMessage] = useState('');
@@ -33,7 +35,11 @@ export default function ProfilePage() {
     setUserData();
   }, [user]);
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    setValidationErrors(prev => ({ ...prev, [name]: '' }));
+  };
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,6 +57,14 @@ export default function ProfilePage() {
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const errors = validateProfileForm(formData);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setValidationErrors({});
     updateUser(formData);
   };
 
@@ -182,9 +196,13 @@ export default function ProfilePage() {
                     name="username"
                     value={formData.username}
                     onChange={onChange}
-                    required
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors"
+                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
+                      validationErrors.username ? 'border-red-500' : 'border-gray-200 focus:border-theme3'
+                    }`}
                   />
+                  {validationErrors.username && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.username}</p>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -194,9 +212,13 @@ export default function ProfilePage() {
                     name="email"
                     value={formData.email}
                     onChange={onChange}
-                    required
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors"
+                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
+                      validationErrors.email ? 'border-red-500' : 'border-gray-200 focus:border-theme3'
+                    }`}
                   />
+                  {validationErrors.email && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>
+                  )}
                 </div>
 
                 <button

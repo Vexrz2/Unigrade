@@ -1,4 +1,5 @@
 import { User } from '@/lib/models/UserModel';
+import { validateUsername, validateEmail, VALIDATION_RULES } from '@/lib/validation';
 
 export async function getUser(userId: string) {
     const user = await User.findById(userId);
@@ -15,20 +16,27 @@ export async function updateUser(userId: string, data: { username: string; email
         throw new Error('User not found');
     }
 
+    // Validate username
+    const usernameValidation = validateUsername(username);
+    if (!usernameValidation.isValid) {
+        throw new Error(usernameValidation.error);
+    }
+
+    // Validate email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+        throw new Error(emailValidation.error);
+    }
+
     // Check if username already exists
     const existingUser = await User.findOne({ username });
     if (user.username !== username && existingUser) {
-        throw new Error('User already exists');
+        throw new Error(VALIDATION_RULES.username.messages.taken);
     }
 
     const existingEmail = await User.findOne({ email });
     if (user.email !== email && existingEmail) {
-        throw new Error('Email already in use');
-    }
-
-    const isValidEmail = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email);
-    if (!isValidEmail) {
-        throw new Error('Invalid Email');
+        throw new Error(VALIDATION_RULES.email.messages.taken);
     }
 
     const updateData: Record<string, unknown> = { username, email };

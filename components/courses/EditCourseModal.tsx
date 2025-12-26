@@ -6,6 +6,7 @@ import type { Course, CourseFormData, SemesterTerm, GradeAttempt } from '@/types
 import { useEditCourse } from '@/hooks/useCourses';
 import { getCourseStatus } from '@/lib/CoursesUtil';
 import { CURRENT_YEAR, YEAR_OPTIONS, TERM_OPTIONS, getStatusDisplay } from '@/lib/constants';
+import { validateCourseName, validateCredits, validateGrade, VALIDATION_RULES } from '@/lib/validation';
 import toast from 'react-hot-toast';
 
 // Helper to get initial form data from course
@@ -90,8 +91,10 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Course name is required';
+    // Validate course name
+    const nameValidation = validateCourseName(formData.name);
+    if (!nameValidation.isValid) {
+      newErrors.name = nameValidation.error;
     }
 
     // Grade is only required for completed courses (past semesters)
@@ -99,28 +102,24 @@ export default function EditCourseModal({ isOpen, onClose, currentCourse }: { is
       const hasGrades = formData.grades && formData.grades.length > 0;
       
       if (!hasGrades) {
-        newErrors.grade = 'At least one grade is required for completed courses';
+        newErrors.grade = VALIDATION_RULES.course.grade.messages.required;
       }
       
       if (hasGrades) {
         for (const attempt of formData.grades!) {
-          if (isNaN(attempt.grade) || attempt.grade < 0 || attempt.grade > 100) {
-            newErrors.grade = 'All grades must be between 0 and 100';
+          const gradeValidation = validateGrade(attempt.grade);
+          if (!gradeValidation.isValid) {
+            newErrors.grade = VALIDATION_RULES.course.grade.messages.invalid;
             break;
           }
         }
       }
     }
 
-    // Check if credit is provided
-    const creditValue = formData.credits;
-    if (creditValue === null || creditValue === undefined || creditValue === '') {
-      newErrors.credits = 'Course credit is required';
-    } else {
-      const credit = Number(creditValue);
-      if (isNaN(credit) || credit <= 0) {
-        newErrors.credits = 'Course credit must be greater than 0';
-      }
+    // Validate credits
+    const creditsValidation = validateCredits(Number(formData.credits));
+    if (!creditsValidation.isValid) {
+      newErrors.credits = creditsValidation.error;
     }
 
     setErrors(newErrors);

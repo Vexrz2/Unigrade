@@ -8,6 +8,7 @@ import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { useViewPasswordToggle } from '../../hooks/useViewPasswordToggle';
 import toast from 'react-hot-toast';
+import { validateEmail, VALIDATION_RULES } from '@/lib/validation';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -25,6 +26,20 @@ export default function LoginPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate email format
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      setErrorMessage(emailValidation.error!);
+      return;
+    }
+    
+    // Validate password is provided
+    if (!formData.password) {
+      setErrorMessage(VALIDATION_RULES.password.messages.required);
+      return;
+    }
+    
     try {
       const res = await api.post('/auth/login', formData);
       if (setUser) setUser(res.data.user);

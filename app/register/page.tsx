@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import api from '../../lib/api';
 import { FcGoogle } from 'react-icons/fc';
 import toast from 'react-hot-toast';
+import { validateEmail } from '@/lib/validation';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -19,14 +20,10 @@ export default function RegisterPage() {
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate email
-    const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
-    if (!email) {
-      setErrorMessage('Email is required');
-      return;
-    }
-    if (!emailRegex.test(email)) {
-      setErrorMessage('Please enter a valid email');
+    // Validate email using centralized validation
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      setErrorMessage(emailValidation.error!);
       return;
     }
 

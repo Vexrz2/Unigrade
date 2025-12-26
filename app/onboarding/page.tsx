@@ -10,6 +10,7 @@ import OnboardingAddCourse from '@/components/onboarding/OnboardingAddCourse';
 import { useViewPasswordToggle } from '@/hooks/useViewPasswordToggle';
 import { FiEye, FiEyeOff, FiCheck, FiArrowLeft, FiLock, FiUser, FiBook, FiCalendar } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { validateUsername, validatePassword, validatePasswordMatch, VALIDATION_RULES } from '@/lib/validation';
 
 type OnboardingStep = 'account' | 'degree' | 'courses';
 
@@ -87,21 +88,32 @@ export default function OnboardingPage() {
 
   const validateAccount = () => {
     const newErrors: Record<string, string> = {};
-    if (!username.trim()) newErrors.username = 'Username is required';
-    else if (username.length < 3) newErrors.username = 'Username must be at least 3 characters';
-    if (!password) newErrors.password = 'Password is required';
-    else if (password.length < 6) newErrors.password = 'Password must be at least 6 characters';
-    if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    
+    const usernameResult = validateUsername(username);
+    if (!usernameResult.isValid) {
+      newErrors.username = usernameResult.error!;
+    }
+    
+    const passwordResult = validatePassword(password);
+    if (!passwordResult.isValid) {
+      newErrors.password = passwordResult.error!;
+    }
+    
+    const matchResult = validatePasswordMatch(password, confirmPassword);
+    if (!matchResult.isValid) {
+      newErrors.confirmPassword = matchResult.error!;
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validateDegree = () => {
     const newErrors: Record<string, string> = {};
-    if (!major) newErrors.major = 'Please select your major';
-    if (!degreeType) newErrors.degreeType = 'Please select your degree type';
+    if (!major) newErrors.major = VALIDATION_RULES.degree.messages.majorRequired;
+    if (!degreeType) newErrors.degreeType = VALIDATION_RULES.degree.messages.typeRequired;
     if (expectedGraduationYear < startYear) {
-      newErrors.expectedGraduationYear = 'Graduation year must be after start year';
+      newErrors.expectedGraduationYear = VALIDATION_RULES.degree.messages.graduationBeforeStart;
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;

@@ -3,15 +3,40 @@
 import React, { useState } from 'react';
 import { FiEye, FiEyeOff, FiX } from 'react-icons/fi';
 import { useViewPasswordToggle } from '../../hooks/useViewPasswordToggle';
+import { validateChangePasswordForm, type ChangePasswordValidationErrors } from '@/lib/validation';
 
 export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMessage }: { isOpen: boolean; onClose: () => void; onSubmit: (e: React.FormEvent<HTMLFormElement>) => void; errorMessage?: string }) {
-  const [formData, setFormData] = useState({ currentPassword: '', newPassword: '' });
+  const [formData, setFormData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [validationErrors, setValidationErrors] = useState<ChangePasswordValidationErrors>({});
   const { isPasswordHidden, toggleViewPassword } = useViewPasswordToggle();
+  
   if (!isOpen) return null;
 
-  const { currentPassword, newPassword } = formData;
+  const { currentPassword, newPassword, confirmPassword } = formData;
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    // Clear validation error for this field when user types
+    setValidationErrors(prev => ({ ...prev, [name]: '' }));
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const errors = validateChangePasswordForm({
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    });
+    
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setValidationErrors({});
+    onSubmit(e);
+  };
 
   return (
     <div 
@@ -34,7 +59,7 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMe
           </div>
           
           {/* Form */}
-          <form onSubmit={onSubmit} className='px-6 py-6'>
+          <form onSubmit={handleSubmit} className='px-6 py-6'>
             <div className="space-y-5">
               <div className="form-group">
                 <label className='block text-gray-700 text-sm font-semibold mb-2'>Current Password</label>
@@ -44,8 +69,9 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMe
                     name="currentPassword" 
                     value={currentPassword} 
                     onChange={onChange} 
-                    required 
-                    className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors text-gray-700"
+                    className={`w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
+                      validationErrors.currentPassword ? 'border-red-500' : 'border-gray-200 focus:border-theme3'
+                    }`}
                     placeholder="Enter current password"
                   />
                   <button 
@@ -56,6 +82,9 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMe
                     {isPasswordHidden ? <FiEye className="w-5 h-5" /> : <FiEyeOff className="w-5 h-5" />}
                   </button>
                 </div>
+                {validationErrors.currentPassword && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.currentPassword}</p>
+                )}
               </div>
               
               <div className="form-group">
@@ -66,9 +95,10 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMe
                     name="newPassword" 
                     value={newPassword} 
                     onChange={onChange} 
-                    required 
-                    className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-lg focus:border-theme3 focus:outline-none transition-colors text-gray-700"
-                    placeholder="Enter new password"
+                    className={`w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
+                      validationErrors.newPassword ? 'border-red-500' : 'border-gray-200 focus:border-theme3'
+                    }`}
+                    placeholder="Enter new password (min. 6 characters)"
                   />
                   <button 
                     type="button" 
@@ -78,6 +108,35 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMe
                     {isPasswordHidden ? <FiEye className="w-5 h-5" /> : <FiEyeOff className="w-5 h-5" />}
                   </button>
                 </div>
+                {validationErrors.newPassword && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.newPassword}</p>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className='block text-gray-700 text-sm font-semibold mb-2'>Confirm New Password</label>
+                <div className="relative">
+                  <input 
+                    type={isPasswordHidden ? "password" : "text"} 
+                    name="confirmPassword" 
+                    value={confirmPassword} 
+                    onChange={onChange} 
+                    className={`w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none transition-colors text-gray-700 ${
+                      validationErrors.confirmPassword ? 'border-red-500' : 'border-gray-200 focus:border-theme3'
+                    }`}
+                    placeholder="Confirm new password"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={toggleViewPassword} 
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-theme3 transition-colors"
+                  >
+                    {isPasswordHidden ? <FiEye className="w-5 h-5" /> : <FiEyeOff className="w-5 h-5" />}
+                  </button>
+                </div>
+                {validationErrors.confirmPassword && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.confirmPassword}</p>
+                )}
               </div>
             </div>
 

@@ -5,6 +5,7 @@ import type { CourseFormData, SemesterTerm, Course } from '@/types';
 import { useAddCourse } from '@/hooks/useCourses';
 import { getCourseStatus } from '@/lib/CoursesUtil';
 import { CURRENT_YEAR, YEAR_OPTIONS, TERM_OPTIONS, getStatusDisplay } from '@/lib/constants';
+import { validateCourseName, validateCredits, validateGrade, VALIDATION_RULES } from '@/lib/validation';
 import toast from 'react-hot-toast';
 
 export default function AddCourse() {
@@ -58,25 +59,28 @@ export default function AddCourse() {
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Course name is required';
+    // Validate course name
+    const nameValidation = validateCourseName(formData.name);
+    if (!nameValidation.isValid) {
+      newErrors.name = nameValidation.error;
     }
 
     // Grade is only required for completed courses (past semesters)
     if (inferredStatus === 'completed') {
       if (gradeInput === '') {
-        newErrors.grade = 'Grade is required for completed courses';
+        newErrors.grade = VALIDATION_RULES.course.grade.messages.required;
       } else {
-        const grade = Number(gradeInput);
-        if (isNaN(grade) || grade < 0 || grade > 100) {
-          newErrors.grade = 'Grade must be between 0 and 100';
+        const gradeValidation = validateGrade(Number(gradeInput));
+        if (!gradeValidation.isValid) {
+          newErrors.grade = gradeValidation.error;
         }
       }
     }
 
-    const credit = Number(formData.credits);
-    if (isNaN(credit) || credit <= 0) {
-      newErrors.credits = 'Course credit must be greater than 0';
+    // Validate credits
+    const creditsValidation = validateCredits(Number(formData.credits));
+    if (!creditsValidation.isValid) {
+      newErrors.credits = creditsValidation.error;
     }
 
     setErrors(newErrors);

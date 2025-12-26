@@ -2,16 +2,28 @@
 
 import React, { useState } from 'react';
 import api from '../../lib/api';
+import { validateEmail } from '@/lib/validation';
 
 export default function RecoverPasswordPage() {
   const [formData, setFormData] = useState({ email: '' });
   const [showMessage, setShowMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setErrorMessage('');
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate email before submitting
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      setErrorMessage(emailValidation.error!);
+      return;
+    }
+    
     try {
       await api.post('/auth/recover-password', formData);
       setShowMessage(true);

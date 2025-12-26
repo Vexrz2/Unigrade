@@ -1,5 +1,6 @@
 import { User } from '@/lib/models/UserModel';
 import type { Course, Semester, GradeAttempt } from '@/types';
+import { validateCourseName, validateCredits, validateGrade, VALIDATION_RULES } from '@/lib/validation';
 
 interface AddCourseData {
     name: string;
@@ -21,19 +22,24 @@ export async function addCourse(userId: string, data: AddCourseData) {
         throw new Error('User not found');
     }
 
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-        throw new Error('Invalid course name');
+    // Validate course name
+    const nameValidation = validateCourseName(name);
+    if (!nameValidation.isValid) {
+        throw new Error(nameValidation.error);
     }
 
-    if (isNaN(credits) || credits <= 0) {
-        throw new Error('Invalid course credit');
+    // Validate credits
+    const creditsValidation = validateCredits(credits);
+    if (!creditsValidation.isValid) {
+        throw new Error(creditsValidation.error);
     }
 
     // Validate grades if provided
     if (grades && grades.length > 0) {
         for (const attempt of grades) {
-            if (isNaN(attempt.grade) || attempt.grade < 0 || attempt.grade > 100) {
-                throw new Error('Invalid grade attempt value');
+            const gradeValidation = validateGrade(attempt.grade);
+            if (!gradeValidation.isValid) {
+                throw new Error(VALIDATION_RULES.course.grade.messages.invalid);
             }
         }
     }
