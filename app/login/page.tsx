@@ -133,7 +133,7 @@ export default function LoginPage() {
             </div>
             <div className='text-center'>
               <span className='text-gray-600 text-sm'>Don&apos;t have an account? </span>
-              <a href='/onboarding' className='text-theme3 hover:text-theme4 font-semibold text-sm transition-colors'>Sign up here</a>
+              <a href='/register' className='text-theme3 hover:text-theme4 font-semibold text-sm transition-colors'>Sign up here</a>
             </div>
           </div>
         </div>
