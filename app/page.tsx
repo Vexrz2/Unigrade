@@ -1,7 +1,9 @@
 "use client";
 
+import { useContext } from "react";
 import Link from "next/link";
 import { FaGraduationCap, FaChartLine, FaBriefcase, FaCalendarAlt, FaCheckCircle, FaArrowRight } from "react-icons/fa";
+import { UserContext } from "@/context/UserContext";
 
 const features = [
   {
@@ -43,6 +45,14 @@ const steps = [
 ];
 
 export default function Home() {
+  const ctx = useContext(UserContext);
+  const user = ctx?.user ?? null;
+  const loading = ctx?.loading ?? true;
+  
+  // Determine link destinations based on auth state
+  const getStartedLink = !loading && user ? "/dashboard" : "/register";
+  const signInLink = !loading && user ? "/dashboard" : "/login";
+  
   return (
     <div className="min-h-screen bg-theme2">
       {/* Hero Section */}
@@ -66,18 +76,20 @@ export default function Home() {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link 
-              href="/register" 
+              href={getStartedLink} 
               className="inline-flex items-center justify-center gap-2 bg-theme3 hover:bg-theme4 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 hover:scale-105 shadow-lg shadow-theme3/30"
             >
-              Get Started Free
+              {!loading && user ? "Go to Dashboard" : "Get Started Free"}
               <FaArrowRight className="w-4 h-4" />
             </Link>
-            <Link 
-              href="/login" 
-              className="inline-flex items-center justify-center gap-2 bg-white text-gray-700 px-8 py-4 rounded-xl font-semibold text-lg border border-gray-200 hover:border-theme3 hover:shadow-lg transition-all duration-300"
-            >
-              Sign In
-            </Link>
+            {(!loading && !user) && (
+              <Link 
+                href={signInLink} 
+                className="inline-flex items-center justify-center gap-2 bg-white text-gray-700 px-8 py-4 rounded-xl font-semibold text-lg border border-gray-200 hover:border-theme3 hover:shadow-lg transition-all duration-300"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -171,10 +183,10 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link 
-                  href="/register" 
+                  href={getStartedLink} 
                   className="inline-flex items-center justify-center gap-2 bg-white text-theme3 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-gray-100 transition-all duration-300 hover:scale-105"
                 >
-                  Start Your Journey
+                  {!loading && user ? "Go to Dashboard" : "Start Your Journey"}
                   <FaArrowRight className="w-4 h-4" />
                 </Link>
               </div>

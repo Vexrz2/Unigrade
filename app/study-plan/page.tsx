@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { 
   getDegreeProgress, 
   getFinalAverageRange, 
@@ -49,7 +49,31 @@ export default function StudyPlanPage() {
   const gpaBySemester = useMemo(() => getGPABySemester(courses), [courses]);
   const completedCoursesWithGrades = useMemo(() => getCompletedCoursesWithGrades(courses), [courses]);
   const [formData, setFormData] = useState({ degreeType: '', major: '', creditRequirement: 120 });
+  // Tab state with mounted check to prevent flicker
   const [activeTab, setActiveTab] = useState<'overview' | 'timeline'>('overview');
+  const [tabMounted, setTabMounted] = useState(false);
+  
+  // Sync tab with URL hash on mount and changes
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash === 'timeline') setActiveTab('timeline');
+    else setActiveTab('overview');
+    setTabMounted(true);
+    
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash === 'timeline') setActiveTab('timeline');
+      else setActiveTab('overview');
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+  
+  const handleTabChange = useCallback((tab: 'overview' | 'timeline') => {
+    setActiveTab(tab);
+    window.history.replaceState(null, '', `#${tab}`);
+  }, []);
   const gpaCalculatorModal = useModal();
   
   // Academic Timeline state
@@ -308,7 +332,7 @@ export default function StudyPlanPage() {
         <div className="mb-6 border-b border-gray-200">
           <nav className="flex gap-4">
             <button
-              onClick={() => setActiveTab('overview')}
+              onClick={() => handleTabChange('overview')}
               className={`pb-3 px-1 font-medium text-sm transition-colors ${
                 activeTab === 'overview'
                   ? 'text-theme3 border-b-2 border-theme3'
@@ -319,7 +343,7 @@ export default function StudyPlanPage() {
               Overview
             </button>
             <button
-              onClick={() => setActiveTab('timeline')}
+              onClick={() => handleTabChange('timeline')}
               className={`pb-3 px-1 font-medium text-sm transition-colors ${
                 activeTab === 'timeline'
                   ? 'text-theme3 border-b-2 border-theme3'
@@ -332,7 +356,11 @@ export default function StudyPlanPage() {
           </nav>
         </div>
 
-        {activeTab === 'overview' ? (
+        {!tabMounted ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-theme3"></div>
+          </div>
+        ) : activeTab === 'overview' ? (
           <>
             {/* Stats Row - Overview and Credits Progress */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

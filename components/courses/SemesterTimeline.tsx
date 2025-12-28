@@ -369,8 +369,8 @@ export default function SemesterTimeline({ courses }: SemesterTimelineProps) {
       targetSemesterKey = overId;
     }
 
-    // If semester changed, update the course
-    if (targetSemesterKey && targetSemesterKey !== currentSemesterKey) {
+    // If semester changed, and not unassigned, update the course
+    if (targetSemesterKey && targetSemesterKey !== currentSemesterKey && targetSemesterKey !== 'unassigned') {
       const newSemester = parseSemesterKey(targetSemesterKey);
       
       // Check if moving to a completed semester (past) without a grade

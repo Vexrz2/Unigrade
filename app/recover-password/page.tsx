@@ -182,9 +182,6 @@ function RecoverPasswordContent() {
                   <div className='mb-4 text-4xl'>✓</div>
                   <p className='text-gray-800 font-semibold mb-2'>{resetSuccessMessage}</p>
                   <p className='text-gray-600 text-sm mb-6'>You can now sign in with your new password.</p>
-                  <a href='/login' className='inline-block bg-theme3 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors'>
-                    Sign In
-                  </a>
                 </div>
               )}
             </div>
@@ -245,7 +242,6 @@ function RecoverPasswordContent() {
                 <div className='mb-4 text-4xl'>✓</div>
                 <p className='text-gray-800 font-semibold mb-2'>{successMessage}</p>
                 <p className='text-gray-600 text-sm mb-6'>Check your inbox for instructions to reset your password. The link will expire in 1 hour.</p>
-                <a href='/login' className='text-theme3 hover:text-theme4 font-semibold transition-colors'>Back to login</a>
               </div>
             )}
           </div>

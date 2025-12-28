@@ -270,6 +270,10 @@ export function validateChangePasswordForm(data: {
     }
   }
 
+  if (data.currentPassword && data.newPassword && data.currentPassword === data.newPassword) {
+    errors.newPassword = 'New password must be different from current password';
+  }
+
   return errors;
 }
 

@@ -11,6 +11,7 @@ import { FiMenu, FiX } from 'react-icons/fi';
 export default function Navbar() {
   const ctx = useContext(UserContext);
   const user = ctx?.user ?? null;
+  const loading = ctx?.loading ?? true;
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -25,6 +26,26 @@ export default function Navbar() {
       ? `${base} bg-theme3 text-white` 
       : `${base} text-gray-200 hover:text-white`;
   };
+
+  // Show loading state while user is being fetched
+  if (loading) {
+    return (
+      <nav className="navbar bg-theme4 shadow-md border-b border-theme3 relative">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Image src={faviconImage} alt="Unigrade Logo" width={40} height={40} className="rounded-lg" />
+            <Link href="/" className="text-2xl font-bold text-white hover:text-gray-100 transition-colors">
+              Unigrade
+            </Link>
+          </div>
+          {/* Loading skeleton */}
+          <div className="hidden md:flex gap-4 items-center">
+            <div className="w-80 h-8 bg-theme3/50 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   if (user) {
     return (

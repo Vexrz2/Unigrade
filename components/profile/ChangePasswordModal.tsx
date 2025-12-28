@@ -10,6 +10,20 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMe
   const [validationErrors, setValidationErrors] = useState<ChangePasswordValidationErrors>({});
   const { isPasswordHidden, toggleViewPassword } = useViewPasswordToggle();
   
+  // Clear form when modal closes
+  const handleClose = () => {
+    setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setValidationErrors({});
+    onClose();
+  };
+  
+  // Handle clicking outside the modal to close it
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      handleClose();
+    }
+  };
+  
   if (!isOpen) return null;
 
   const { currentPassword, newPassword, confirmPassword } = formData;
@@ -43,6 +57,7 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMe
       tabIndex={-1} 
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
       style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+      onClick={handleBackdropClick}
     >
       <div className="w-full max-w-md mx-4">
         <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
@@ -51,7 +66,7 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMe
             <h3 className="text-xl font-bold text-white">Change Password</h3>
             <button 
               type="button" 
-              onClick={onClose} 
+              onClick={handleClose} 
               className="text-white hover:text-gray-200 transition-colors rounded-lg p-1 hover:bg-white/20"
             >
               <FiX className="w-6 h-6" />
@@ -150,7 +165,7 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit, errorMe
             <div className="flex gap-3 mt-6">
               <button 
                 type="button" 
-                onClick={onClose}
+                onClick={handleClose}
                 className='flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors'
               >
                 Cancel

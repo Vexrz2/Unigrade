@@ -83,7 +83,33 @@ export default function CareerPlanPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [jobListings, setJobListings] = useState<JobListing[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  // Tab state with mounted check to prevent flicker
   const [activeTab, setActiveTab] = useState<'search' | 'saved' | 'resources'>('search');
+  const [tabMounted, setTabMounted] = useState(false);
+  
+  // Sync tab with URL hash on mount and changes
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash === 'saved') setActiveTab('saved');
+    else if (hash === 'resources') setActiveTab('resources');
+    else setActiveTab('search');
+    setTabMounted(true);
+    
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash === 'saved') setActiveTab('saved');
+      else if (hash === 'resources') setActiveTab('resources');
+      else setActiveTab('search');
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+  
+  const handleTabChange = useCallback((tab: 'search' | 'saved' | 'resources') => {
+    setActiveTab(tab);
+    window.history.replaceState(null, '', `#${tab}`);
+  }, []);
   const [hasSearched, setHasSearched] = useState(false);
 
   // Use Tanstack Query for saved jobs
@@ -197,7 +223,7 @@ export default function CareerPlanPage() {
         {/* Tab Navigation */}
         <div className="flex flex-wrap gap-2 mb-6">
           <button
-            onClick={() => setActiveTab('search')}
+            onClick={() => handleTabChange('search')}
             className={`px-6 py-3 rounded-lg font-medium transition-all ${
               activeTab === 'search'
                 ? 'bg-theme3 text-white shadow-md'
@@ -208,7 +234,7 @@ export default function CareerPlanPage() {
             Search Jobs
           </button>
           <button
-            onClick={() => setActiveTab('saved')}
+            onClick={() => handleTabChange('saved')}
             className={`px-6 py-3 rounded-lg font-medium transition-all ${
               activeTab === 'saved'
                 ? 'bg-theme3 text-white shadow-md'
@@ -219,7 +245,7 @@ export default function CareerPlanPage() {
             Saved ({savedJobsData.length})
           </button>
           <button
-            onClick={() => setActiveTab('resources')}
+            onClick={() => handleTabChange('resources')}
             className={`px-6 py-3 rounded-lg font-medium transition-all ${
               activeTab === 'resources'
                 ? 'bg-theme3 text-white shadow-md'
@@ -231,8 +257,14 @@ export default function CareerPlanPage() {
           </button>
         </div>
 
+        {!tabMounted ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-theme3"></div>
+          </div>
+        ) : null}
+
         {/* Search Tab */}
-        {activeTab === 'search' && (
+        {tabMounted && activeTab === 'search' && (
           <>
             {/* Search Form */}
             <div className="bg-white  rounded-lg shadow-md p-6 mb-6">
@@ -453,7 +485,7 @@ export default function CareerPlanPage() {
         )}
 
         {/* Saved Tab */}
-        {activeTab === 'saved' && (
+        {tabMounted && activeTab === 'saved' && (
           <div>
             {savedJobListings.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -523,7 +555,7 @@ export default function CareerPlanPage() {
         )}
 
         {/* Resources Tab */}
-        {activeTab === 'resources' && (
+        {tabMounted && activeTab === 'resources' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Resume Tips */}
             <div className="bg-white  rounded-lg shadow-md p-6">
