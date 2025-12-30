@@ -54,6 +54,20 @@ export const VALIDATION_RULES = {
         required: 'Course name is required',
       },
     },
+    gradeComponent: {
+      minPercentage: 0,
+      maxPercentage: 100,
+      minComponents: 1,
+      maxComponents: 10,
+      messages: {
+        nameRequired: 'Component name is required',
+        invalidGrade: 'Component grade must be between 0 and 100',
+        invalidPercentage: 'Component percentage must be between 0 and 100',
+        percentageSumInvalid: 'Component percentages must sum to 100%',
+        tooManyComponents: 'Maximum 10 grade components allowed',
+        tooFewComponents: 'At least 1 grade component required when using components',
+      },
+    },
   },
   degree: {
     creditRequirement: {
@@ -134,6 +148,56 @@ export function validateGrade(grade: number | undefined | null): ValidationResul
   if (grade < VALIDATION_RULES.course.grade.min || grade > VALIDATION_RULES.course.grade.max) {
     return { isValid: false, error: VALIDATION_RULES.course.grade.messages.invalid };
   }
+  return { isValid: true };
+}
+
+// Grade component validation
+export interface GradeComponentInput {
+  name?: string;
+  grade?: number;
+  percentage?: number;
+}
+
+export function validateGradeComponent(component: GradeComponentInput): ValidationResult {
+  if (!component.name || !component.name.trim()) {
+    return { isValid: false, error: VALIDATION_RULES.course.gradeComponent.messages.nameRequired };
+  }
+  if (component.grade === undefined || component.grade === null || 
+      component.grade < VALIDATION_RULES.course.grade.min || 
+      component.grade > VALIDATION_RULES.course.grade.max) {
+    return { isValid: false, error: VALIDATION_RULES.course.gradeComponent.messages.invalidGrade };
+  }
+  if (component.percentage === undefined || component.percentage === null ||
+      component.percentage < VALIDATION_RULES.course.gradeComponent.minPercentage || 
+      component.percentage > VALIDATION_RULES.course.gradeComponent.maxPercentage) {
+    return { isValid: false, error: VALIDATION_RULES.course.gradeComponent.messages.invalidPercentage };
+  }
+  return { isValid: true };
+}
+
+export function validateGradeComponents(components: GradeComponentInput[]): ValidationResult {
+  // Check component count limits
+  if (components.length > VALIDATION_RULES.course.gradeComponent.maxComponents) {
+    return { isValid: false, error: VALIDATION_RULES.course.gradeComponent.messages.tooManyComponents };
+  }
+  if (components.length < VALIDATION_RULES.course.gradeComponent.minComponents) {
+    return { isValid: false, error: VALIDATION_RULES.course.gradeComponent.messages.tooFewComponents };
+  }
+  
+  // Validate each component
+  for (const component of components) {
+    const result = validateGradeComponent(component);
+    if (!result.isValid) {
+      return result;
+    }
+  }
+  
+  // Check that percentages sum to 100
+  const percentageSum = components.reduce((sum, comp) => sum + (comp.percentage || 0), 0);
+  if (Math.abs(percentageSum - 100) > 0.01) { // Allow small floating point tolerance
+    return { isValid: false, error: VALIDATION_RULES.course.gradeComponent.messages.percentageSumInvalid };
+  }
+  
   return { isValid: true };
 }
 

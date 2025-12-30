@@ -1,5 +1,38 @@
 import _ from 'lodash';
-import type { Course, User, Semester, SemesterTerm, CourseStatus } from '../types';
+import type { Course, User, Semester, SemesterTerm, CourseStatus, GradeComponent, GradeAttempt } from '../types';
+
+/**
+ * Calculate grade from weighted components
+ * Returns the weighted average of all component grades
+ */
+export const calculateGradeFromComponents = (components: GradeComponent[]): number => {
+  if (!components || components.length === 0) return 0;
+  
+  // Calculate weighted sum: sum of (grade * percentage) / 100
+  const weightedSum = components.reduce((sum, comp) => {
+    return sum + (comp.grade * comp.percentage / 100);
+  }, 0);
+  
+  return Math.round(weightedSum * 100) / 100; // Round to 2 decimal places
+};
+
+/**
+ * Check if a grade attempt uses components for grade calculation
+ */
+export const hasGradeComponents = (attempt: GradeAttempt): boolean => {
+  return !!(attempt.components && attempt.components.length > 0);
+};
+
+/**
+ * Get the effective grade for a grade attempt
+ * Uses calculated grade from components if they exist, otherwise uses the direct grade
+ */
+export const getEffectiveGrade = (attempt: GradeAttempt): number => {
+  if (hasGradeComponents(attempt)) {
+    return calculateGradeFromComponents(attempt.components!);
+  }
+  return attempt.grade;
+};
 
 /**
  * Get the current semester based on the current date
@@ -54,11 +87,12 @@ export const getCourseStatus = (semester?: Semester): CourseStatus => {
 
 /**
  * Get the final grade for a course (from grades array)
+ * If the final attempt has components, calculates grade from weighted components
  */
 export const getFinalGrade = (course: Course): number | undefined => {
   if (course.grades && course.grades.length > 0) {
     const finalAttempt = course.grades.find(g => g.isFinal) || course.grades[course.grades.length - 1];
-    return finalAttempt.grade;
+    return getEffectiveGrade(finalAttempt);
   }
   return undefined;
 };

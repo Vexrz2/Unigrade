@@ -1,11 +1,19 @@
 import mongoose from 'mongoose';
 
+// Grade component subdocument schema (for weighted grade breakdown)
+const gradeComponentSchema = new mongoose.Schema({
+    name: { type: String, required: true }, // e.g., "Midterm", "Final Exam"
+    grade: { type: Number, required: true, min: 0, max: 100 },
+    percentage: { type: Number, required: true, min: 0, max: 100 }, // Weight percentage (0 allowed for optional/incomplete)
+}, { _id: false });
+
 // Grade attempt subdocument schema (for tracking retakes)
 const gradeAttemptSchema = new mongoose.Schema({
     grade: { type: Number, required: true, min: 0, max: 100 },
     date: { type: String }, // ISO date string
     label: { type: String }, // e.g., "First attempt", "Retake"
     isFinal: { type: Boolean, default: false },
+    components: [gradeComponentSchema], // Optional weighted grade breakdown (1-10 components)
 }, { _id: false });
 
 // Semester subdocument schema

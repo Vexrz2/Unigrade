@@ -9,11 +9,19 @@ export type Semester = {
 // Course status types
 export type CourseStatus = 'planned' | 'in-progress' | 'completed';
 
+// Grade component for weighted breakdown (e.g., midterm, final exam, assignments)
+export type GradeComponent = {
+  name: string;       // e.g., "Midterm", "Final Exam", "Assignments"
+  grade: number;      // Score for this component (0-100)
+  percentage: number; // Weight percentage (1-100, all components must sum to 100)
+};
+
 // Grade attempt (for tracking multiple test attempts/retakes)
 export type GradeAttempt = {
   grade: number;
   label?: string; // e.g., "First attempt", "Retake", "Final exam"
   isFinal?: boolean; // Whether this is the final grade used for GPA
+  components?: GradeComponent[]; // Optional weighted grade breakdown (1-10 components)
 };
 
 export type Course = {
